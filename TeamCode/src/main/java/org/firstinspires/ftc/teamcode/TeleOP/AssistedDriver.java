@@ -1,10 +1,10 @@
 package org.firstinspires.ftc.teamcode.TeleOP; // package org.firstinspires.ftc.robotcontroller.external.samples;
 
-import com.qualcomm.robotcore.hardware.Servo;
-import com.qualcomm.robotcore.hardware.TouchSensor;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.hardware.TouchSensor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.util.ConfigManager;
@@ -12,7 +12,7 @@ import org.firstinspires.ftc.teamcode.util.ConfigManager;
 import java.io.IOException;
 
 @TeleOp(name="Main TeleOP", group="Into-The-Deep")
-public class MecanumDrivers extends OpMode
+public class AssistedDriver extends OpMode
 {
     // define the motors and whatnot
     ConfigManager config = new ConfigManager("TeamCode/src/main/res/values/robot.properties");
@@ -20,7 +20,7 @@ public class MecanumDrivers extends OpMode
     private final int ARM_TWIST_MIN   = config.getInt("ARM_TWIST_MIN"); //-140; // Equivalent to -180 degrees
     private final int ARM_TWIST_MAX   = config.getInt("ARM_TWIST_MAX"); //140;  // Equivalent to 180 degrees
     private int armTwistStartingPosition     = config.getInt("ARM_TWIST_START");
-    
+
     private final int ARM_EXTEND_MIN = config.getInt("ARM_EXTEND_MIN");
     private final int ARM_EXTEND_MAX = config.getInt("ARM_EXTEND_MAX");
     private int armExtendStartingPosition   = config.getInt("ARM_EXTEND_START");
@@ -38,7 +38,7 @@ public class MecanumDrivers extends OpMode
     private Servo ServoClaw = null;
     private TouchSensor LiftarmStop = null;
 
-    public MecanumDrivers() throws IOException {
+    public AssistedDriver() throws IOException {
     }
 
     @Override

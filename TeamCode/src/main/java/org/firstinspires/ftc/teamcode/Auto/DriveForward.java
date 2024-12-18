@@ -49,7 +49,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
  * Use Android Studio to Copy this Class, and Paste it into your team's code folder with a new name.
  * Remove or comment out the @Disabled line to add this OpMode to the Driver Station OpMode list
  */
-@Autonomous(name="Basic: Linear OpMode", group="Linear OpMode")
+@Autonomous(name="DriveForward", group="Into-The-Deep")
 
 public class DriveForward extends LinearOpMode {
     private DcMotor Drive_FrontLeft = null;
@@ -118,7 +118,7 @@ public class DriveForward extends LinearOpMode {
                 wheelpower = calculateMecanum(0, 0, 0);
             } else {
                 Arm_Extend.setPower(0);
-                wheelpower = calculateMecanum(0.5, 0, 0);
+                wheelpower = calculateMecanum(1, 0, 0);
             }
 
             
