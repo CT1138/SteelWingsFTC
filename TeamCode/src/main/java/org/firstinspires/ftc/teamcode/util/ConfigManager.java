@@ -13,6 +13,8 @@ public class ConfigManager {
         properties = new Properties();
         try (FileInputStream fis = new FileInputStream(filePath)) {
             properties.load(fis);
+        } catch (IOException e) {
+            System.err.println("Error loading config file: " + e.getMessage());
         }
     }
 

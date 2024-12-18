@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode; // package org.firstinspires.ftc.robotcontroller.external.samples;
+package org.firstinspires.ftc.teamcode.TeleOP; // package org.firstinspires.ftc.robotcontroller.external.samples;
 
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.TouchSensor;
@@ -9,18 +9,20 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.util.ConfigManager;
 
+import java.io.IOException;
+
 @TeleOp(name="Mecanum Drivers", group="2024")
 public class MecanumDrivers extends OpMode
 {
     // define the motors and whatnot
-    ConfigManager config = new ConfigManager("res/values/Robot.properties");
-    private static final int ARM_TWIST_MIN   = config.getInt("ARM_TWIST_MIN"); //-140; // Equivalent to -180 degrees
-    private static final int ARM_TWIST_MAX   = config.getInt("ARM_TWIST_MAX"); //140;  // Equivalent to 180 degrees
-    private static final int armTwistStartingPosition     = config.getInt("ARM_TWIST_START");
+    ConfigManager config = new ConfigManager("TeamCode/src/main/res/values/Robot.properties");
+    private final int ARM_TWIST_MIN   = config.getInt("ARM_TWIST_MIN"); //-140; // Equivalent to -180 degrees
+    private final int ARM_TWIST_MAX   = config.getInt("ARM_TWIST_MAX"); //140;  // Equivalent to 180 degrees
+    private int armTwistStartingPosition     = config.getInt("ARM_TWIST_START");
     
-    private static final int ARM_EXTEND_MIN = config.getInt("ARM_EXTEND_MIN");
-    private static final int ARM_EXTEND_MAX = config.getInt("ARM_EXTEND_MAX");
-    private static final int armExtendStartingPosition   = config.getInt("ARM_EXTEND_START");
+    private final int ARM_EXTEND_MIN = config.getInt("ARM_EXTEND_MIN");
+    private final int ARM_EXTEND_MAX = config.getInt("ARM_EXTEND_MAX");
+    private int armExtendStartingPosition   = config.getInt("ARM_EXTEND_START");
 
 
     private final ElapsedTime runtime = new ElapsedTime();
@@ -38,6 +40,9 @@ public class MecanumDrivers extends OpMode
     private boolean clawOpen            = false;
     private double   lastPressTime       = 0.0;
     private double   timeSinceLastPress  = runtime.time() - lastPressTime;
+
+    public MecanumDrivers() throws IOException {
+    }
 
     @Override
     public void init() {

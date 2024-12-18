@@ -1,9 +1,8 @@
-package org.firstinspires.ftc.teamcode;
+package org.firstinspires.ftc.teamcode.Auto;
 
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.IMU;
@@ -21,8 +20,6 @@ public class Auto_ParkFromLeft extends LinearOpMode {
     private DcMotor Drive_FrontRight = null;
     private DcMotor Drive_RearLeft = null;
     private DcMotor Drive_RearRight = null;
-    private DcMotor Arm_Extend = null;
-    private Servo ServoClaw = null;
     private IMU             imu         = null;      // Control/Expansion Hub IMU
 
     private double          headingError  = 0;
@@ -37,8 +34,6 @@ public class Auto_ParkFromLeft extends LinearOpMode {
 
     private int     frontLeftTarget = 0;
     private int     frontRightTarget = 0;
-    private int     rearLeftTarget = 0;
-    private int     rearRightTarget = 0;
 
     // Calculate the COUNTS_PER_INCH for your specific drive train.
     // Go to your motor vendor website to determine your motor's COUNTS_PER_MOTOR_REV
@@ -73,9 +68,8 @@ public class Auto_ParkFromLeft extends LinearOpMode {
         Drive_FrontRight = hardwareMap.get(DcMotor.class, "Drive_FrontRight");
         Drive_RearLeft   = hardwareMap.get(DcMotor.class, "Drive_RearLeft");
         Drive_RearRight  = hardwareMap.get(DcMotor.class, "Drive_RearRight");
-        
-        Arm_Extend       = hardwareMap.get(DcMotor.class, "Arm_Extend");
-        ServoClaw        = hardwareMap.get(Servo.class, "Servo_Claw");
+
+        Servo servoClaw = hardwareMap.get(Servo.class, "Servo_Claw");
     
         // Initialize the drive system variables.
 
@@ -130,7 +124,7 @@ public class Auto_ParkFromLeft extends LinearOpMode {
         //          holdHeading() is used after turns to let the heading stabilize
         //          Add a sleep(2000) after any step to keep the telemetry data visible for review
         
-        ServoClaw.setPosition(1);
+        servoClaw.setPosition(1);
         //Arm_Extend.setPower(-0.5);
         //sleep(1000);
         //Arm_Extend.setPower(0);
@@ -153,8 +147,6 @@ public class Auto_ParkFromLeft extends LinearOpMode {
         turnToHeading( TURN_SPEED, 0);
 
         telemetry.addData("Path", "Complete");
-        //Arm_Extend.setPower(0.4);
-        //sleep(900);
         
         telemetry.update();
         sleep(1000);  // Pause to display last telemetry message.
@@ -191,9 +183,9 @@ public class Auto_ParkFromLeft extends LinearOpMode {
             // Determine new target position, and pass to motor controller
             int moveCounts = (int)(distance * COUNTS_PER_INCH);
             frontLeftTarget = Drive_FrontLeft.getCurrentPosition() + moveCounts;
-            rearLeftTarget  = Drive_RearLeft.getCurrentPosition() + moveCounts;
+            int rearLeftTarget = Drive_RearLeft.getCurrentPosition() + moveCounts;
             frontRightTarget = Drive_FrontRight.getCurrentPosition() + moveCounts;
-            rearRightTarget  = Drive_RearRight.getCurrentPosition() + moveCounts;
+            int rearRightTarget = Drive_RearRight.getCurrentPosition() + moveCounts;
             
             // Set Target FIRST, then turn on RUN_TO_POSITION
             Drive_FrontLeft.setTargetPosition(frontLeftTarget);
