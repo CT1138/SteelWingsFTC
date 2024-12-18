@@ -15,7 +15,7 @@ import java.io.IOException;
 public class MecanumDrivers extends OpMode
 {
     // define the motors and whatnot
-    ConfigManager config = new ConfigManager("TeamCode/src/main/res/values/Robot.properties");
+    ConfigManager config = new ConfigManager("TeamCode/src/main/res/values/rrobot.properties");
     private final int ARM_TWIST_MIN   = config.getInt("ARM_TWIST_MIN"); //-140; // Equivalent to -180 degrees
     private final int ARM_TWIST_MAX   = config.getInt("ARM_TWIST_MAX"); //140;  // Equivalent to 180 degrees
     private int armTwistStartingPosition     = config.getInt("ARM_TWIST_START");
@@ -36,10 +36,6 @@ public class MecanumDrivers extends OpMode
 
     private Servo ServoClaw = null;
     private TouchSensor LiftarmStop = null;
-
-    private boolean clawOpen            = false;
-    private double   lastPressTime       = 0.0;
-    private double   timeSinceLastPress  = runtime.time() - lastPressTime;
 
     public MecanumDrivers() throws IOException {
     }
@@ -78,13 +74,9 @@ public class MecanumDrivers extends OpMode
     }
 
     @Override
-    public void init_loop() {}
-
-    @Override
     public void start() {
         runtime.reset();
         ServoClaw.setPosition(1);
-        lastPressTime = runtime.time();
         armTwistStartingPosition = Arm_Twist.getCurrentPosition();
     }
 
@@ -127,8 +119,6 @@ public class MecanumDrivers extends OpMode
         }
 
         if (gamepad2.dpad_up || gamepad2.dpad_down) {
-            lastPressTime = runtime.time();
-
             if (gamepad2.dpad_up) {
                 ServoClaw.setPosition(-1);
             }
