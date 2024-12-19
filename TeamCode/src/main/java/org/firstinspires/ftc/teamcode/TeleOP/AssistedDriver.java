@@ -17,32 +17,36 @@ public class AssistedDriver extends OpMode
 {
     // define the motors and whatnot
     Mecanum mecanum = new Mecanum();
+
+    // ConfigManager setup
     ConfigManager config = new ConfigManager("TeamCode/src/main/res/values/robot.properties");
     ConfigManager devices = new ConfigManager("TeamCode/src/main/res/values/devices.properties");
-    private final int ARM_TWIST_MIN   = config.getInt("ARM_TWIST_MIN"); //-140; // Equivalent to -180 degrees
-    private final int ARM_TWIST_MAX   = config.getInt("ARM_TWIST_MAX"); //140;  // Equivalent to 180 degrees
-    private int armTwistStartingPosition     = config.getInt("ARM_TWIST_START");
+    private final int ARM_TWIST_MIN         = config.getInt("ARM_TWIST_MIN"); //-140; // Equivalent to -180 degrees
+    private final int ARM_TWIST_MAX         = config.getInt("ARM_TWIST_MAX"); //140;  // Equivalent to 180 degrees
+    private int armTwistStartingPosition    = config.getInt("ARM_TWIST_START");
 
-    private final int ARM_EXTEND_MIN = config.getInt("ARM_EXTEND_MIN");
-    private final int ARM_EXTEND_MAX = config.getInt("ARM_EXTEND_MAX");
+    private final int ARM_EXTEND_MIN        = config.getInt("ARM_EXTEND_MIN");
+    private final int ARM_EXTEND_MAX        = config.getInt("ARM_EXTEND_MAX");
     private int armExtendStartingPosition   = config.getInt("ARM_EXTEND_START");
 
-    private final int ARM_ELBOW_MIN = config.getInt("ARM_ELBOW_MIN");
-    private final int ARM_ELBOW_MAX = config.getInt("ARM_ELBOW_MAX");
-    private int armElbowStartingPosition = config.getInt("ARM_ELBOW_START");
+    private final int ARM_ELBOW_MIN         = config.getInt("ARM_ELBOW_MIN");
+    private final int ARM_ELBOW_MAX         = config.getInt("ARM_ELBOW_MAX");
+    private int armElbowStartingPosition    = config.getInt("ARM_ELBOW_START");
 
+
+
+    // Declare empty motor objects so they can be loaded later
+    // idk why tf this has to be here, but it wont work unless these are declared outside of init()
     private final ElapsedTime runtime = new ElapsedTime();
-    private DcMotor Drive_FrontLeft = null;
-    private DcMotor Drive_FrontRight = null;
-    private DcMotor Drive_RearLeft = null;
-    private DcMotor Drive_RearRight = null;
-    private DcMotor Arm_Extend = null;
-    private DcMotor Arm_PhaseTwo = null;
-
-    private DcMotor Arm_Twist = null;
-
-    private Servo ServoClaw = null;
-    private TouchSensor LiftarmStop = null;
+    private DcMotor Drive_FrontLeft   = null;
+    private DcMotor Drive_FrontRight  = null;
+    private DcMotor Drive_RearLeft    = null;
+    private DcMotor Drive_RearRight   = null;
+    private DcMotor Arm_Extend        = null;
+    private DcMotor Arm_PhaseTwo      = null;
+    private DcMotor Arm_Twist         = null;
+    private Servo ServoClaw           = null;
+    private TouchSensor LiftarmStop   = null;
 
     public AssistedDriver() throws IOException {
     }
@@ -50,15 +54,19 @@ public class AssistedDriver extends OpMode
     @Override
     public void init() {
         // Single execution on INIT
+
+        // Set up the drivetrain
         Drive_FrontLeft  = hardwareMap.get(DcMotor.class, "Drive_FrontLeft");
         Drive_FrontRight = hardwareMap.get(DcMotor.class, "Drive_FrontRight");
         Drive_RearLeft   = hardwareMap.get(DcMotor.class, "Drive_RearLeft");
         Drive_RearRight  = hardwareMap.get(DcMotor.class, "Drive_RearRight");
 
+        // Set up the arm
         Arm_Extend = hardwareMap.get(DcMotor.class, "Arm_Extend");
         Arm_PhaseTwo = hardwareMap.get(DcMotor.class, "Arm_PhaseTwo");
         Arm_Twist = hardwareMap.get(DcMotor.class, "Arm_Twist");
 
+        // set up the servo and stop touch sensor
         ServoClaw = hardwareMap.get(Servo.class, "Servo_Claw");
         LiftarmStop = hardwareMap.get(TouchSensor.class, "TouchSensor");
 
