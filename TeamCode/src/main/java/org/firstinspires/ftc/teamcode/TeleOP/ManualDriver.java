@@ -9,6 +9,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.util.ConfigManager;
 import org.firstinspires.ftc.teamcode.util.Mecanum;
+import org.firstinspires.ftc.teamcode.util.MathUtilities;
 
 import java.io.IOException;
 
@@ -17,10 +18,12 @@ public class ManualDriver extends OpMode
 {
     // define the motors and whatnot
     Mecanum mecanum = new Mecanum();
-    ConfigManager config = new ConfigManager("TeamCode/src/main/res/values/robot.properties");
-    ConfigManager devices = new ConfigManager("TeamCode/src/main/res/values/devices.properties");
+    MathUtilities math = new MathUtilities();
+    ConfigManager config = new ConfigManager("TeamCode/src/main/res/raw/robot.properties");
+    ConfigManager devices = new ConfigManager("TeamCode/src/main/res/raw/devices.properties");
     private final int ARM_TWIST_MIN   = config.getInt("ARM_TWIST_MIN"); //-140; // Equivalent to -180 degrees
     private final int ARM_TWIST_MAX   = config.getInt("ARM_TWIST_MAX"); //140;  // Equivalent to 180 degrees
+    private int armTwistPositionIndex = 0;
     private int armTwistStartingPosition     = config.getInt("ARM_TWIST_START");
     
     private final int ARM_EXTEND_MIN = config.getInt("ARM_EXTEND_MIN");
@@ -101,20 +104,17 @@ public class ManualDriver extends OpMode
         Arm_Extend.setPower(extendPower);
 
         // Arm Twist using power and position limits
-        double twistPower = 0;
+
+        int twistFactor = 2;
+        if(gamepad2.left_bumper) twistFactor = 1;
         if (gamepad2.dpad_left) {
-            twistPower = 0.25;
+            armTwistPositionIndex = armTwistPositionIndex - twistFactor;
         } else if (gamepad2.dpad_right) {
-            twistPower = -0.25;
+            armTwistPositionIndex = armTwistPositionIndex + twistFactor;
         }
 
-        int currentPosition = Arm_Twist.getCurrentPosition();
-        if ((currentPosition <= armTwistStartingPosition + ARM_TWIST_MAX && twistPower > 0) ||
-            (currentPosition >= armTwistStartingPosition + ARM_TWIST_MIN && twistPower < 0)) {
-            Arm_Twist.setPower(twistPower);
-        } else {
-            Arm_Twist.setPower(0.0);
-        }
+        int twistPosition = math.percentToPosition(ARM_TWIST_MIN, ARM_TWIST_MAX, armTwistPositionIndex);
+        Arm_Twist.setTargetPosition(twistPosition);
 
         if (gamepad2.dpad_up || gamepad2.dpad_down) {
             if (gamepad2.dpad_up) {
