@@ -1,20 +1,22 @@
 package org.firstinspires.ftc.teamcode.TeleOP; // package org.firstinspires.ftc.robotcontroller.external.samples;
 
+import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.hardware.TouchSensor;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.Servo;
-import com.qualcomm.robotcore.hardware.TouchSensor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.util.ConfigManager;
+import org.firstinspires.ftc.teamcode.util.Mecanum;
 
 import java.io.IOException;
 
-@TeleOp(name="Main TeleOP", group="Into-The-Deep")
+@TeleOp(name="Assisted Driver", group="Into-The-Deep")
 public class AssistedDriver extends OpMode
 {
     // define the motors and whatnot
+    Mecanum mecanum = new Mecanum();
     ConfigManager config = new ConfigManager("TeamCode/src/main/res/values/robot.properties");
     ConfigManager devices = new ConfigManager("TeamCode/src/main/res/values/devices.properties");
     private final int ARM_TWIST_MIN   = config.getInt("ARM_TWIST_MIN"); //-140; // Equivalent to -180 degrees
@@ -25,6 +27,9 @@ public class AssistedDriver extends OpMode
     private final int ARM_EXTEND_MAX = config.getInt("ARM_EXTEND_MAX");
     private int armExtendStartingPosition   = config.getInt("ARM_EXTEND_START");
 
+    private final int ARM_ELBOW_MIN = config.getInt("ARM_ELBOW_MIN");
+    private final int ARM_ELBOW_MAX = config.getInt("ARM_ELBOW_MAX");
+    private int armElbowStartingPosition = config.getInt("ARM_ELBOW_START");
 
     private final ElapsedTime runtime = new ElapsedTime();
     private DcMotor Drive_FrontLeft = null;
@@ -33,6 +38,7 @@ public class AssistedDriver extends OpMode
     private DcMotor Drive_RearRight = null;
     private DcMotor Arm_Extend = null;
     private DcMotor Arm_PhaseTwo = null;
+
     private DcMotor Arm_Twist = null;
 
     private Servo ServoClaw = null;
@@ -44,17 +50,17 @@ public class AssistedDriver extends OpMode
     @Override
     public void init() {
         // Single execution on INIT
-        Drive_FrontLeft  = hardwareMap.get(DcMotor.class, devices.getString("FrontLeft"));
-        Drive_FrontRight = hardwareMap.get(DcMotor.class, devices.getString("FrontRight"));
-        Drive_RearLeft   = hardwareMap.get(DcMotor.class, devices.getString("RearLeft"));
-        Drive_RearRight  = hardwareMap.get(DcMotor.class, devices.getString("RearRight"));
+        Drive_FrontLeft  = hardwareMap.get(DcMotor.class, "Drive_FrontLeft");
+        Drive_FrontRight = hardwareMap.get(DcMotor.class, "Drive_FrontRight");
+        Drive_RearLeft   = hardwareMap.get(DcMotor.class, "Drive_RearLeft");
+        Drive_RearRight  = hardwareMap.get(DcMotor.class, "Drive_RearRight");
 
-        Arm_Extend = hardwareMap.get(DcMotor.class, devices.getString("ArmExtend"));
-        Arm_PhaseTwo = hardwareMap.get(DcMotor.class, devices.getString("ArmElbow"));
-        Arm_Twist = hardwareMap.get(DcMotor.class, devices.getString("ArmTwist"));
+        Arm_Extend = hardwareMap.get(DcMotor.class, "Arm_Extend");
+        Arm_PhaseTwo = hardwareMap.get(DcMotor.class, "Arm_PhaseTwo");
+        Arm_Twist = hardwareMap.get(DcMotor.class, "Arm_Twist");
 
-        ServoClaw = hardwareMap.get(Servo.class, devices.getString("Claw"));
-        LiftarmStop = hardwareMap.get(TouchSensor.class, devices.getString("Stopper"));
+        ServoClaw = hardwareMap.get(Servo.class, "Servo_Claw");
+        LiftarmStop = hardwareMap.get(TouchSensor.class, "TouchSensor");
 
         Drive_FrontLeft.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         Drive_FrontRight.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
@@ -63,10 +69,8 @@ public class AssistedDriver extends OpMode
 
         Arm_Extend.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         Arm_PhaseTwo.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        Arm_Twist.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         Arm_Extend.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        Arm_Twist.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
         Drive_FrontLeft.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         Drive_FrontRight.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
@@ -78,15 +82,8 @@ public class AssistedDriver extends OpMode
     public void start() {
         runtime.reset();
         ServoClaw.setPosition(1);
-        armTwistStartingPosition = Arm_Twist.getCurrentPosition();
-    }
-
-    private double[] calculateMecanum(double drive, double strafe, double twist) {
-        double frontleft = drive + strafe + twist;
-        double frontright = drive - strafe - twist;
-        double rearleft = drive - strafe + twist;
-        double rearright = drive + strafe - twist;
-        return new double[]{-frontleft, frontright, -rearleft, rearright};
+        armExtendStartingPosition = Arm_Extend.getCurrentPosition();
+        armElbowStartingPosition = Arm_PhaseTwo.getCurrentPosition();
     }
 
     private void liftarmMaster() {
@@ -104,16 +101,16 @@ public class AssistedDriver extends OpMode
         Arm_Extend.setPower(extendPower);
 
         // Arm Twist using power and position limits
-        double twistPower = 0.0;
+        double twistPower = 0;
         if (gamepad2.dpad_left) {
-            twistPower = 0.5;
+            twistPower = 0.25;
         } else if (gamepad2.dpad_right) {
-            twistPower = -0.5;
+            twistPower = -0.25;
         }
 
         int currentPosition = Arm_Twist.getCurrentPosition();
         if ((currentPosition <= armTwistStartingPosition + ARM_TWIST_MAX && twistPower > 0) ||
-            (currentPosition >= armTwistStartingPosition + ARM_TWIST_MIN && twistPower < 0)) {
+                (currentPosition >= armTwistStartingPosition + ARM_TWIST_MIN && twistPower < 0)) {
             Arm_Twist.setPower(twistPower);
         } else {
             Arm_Twist.setPower(0.0);
@@ -128,12 +125,14 @@ public class AssistedDriver extends OpMode
                 ServoClaw.setPosition(1);
             }
         }
-
+        telemetry.addLine("===================================");
+        telemetry.addLine("Arm Positions");
+        telemetry.addLine("===================================");
         telemetry.addData("Arm Extend Position", Arm_Extend.getCurrentPosition());
-        telemetry.addData("Arm Elbow Power", Arm_PhaseTwo.getPower());
+        telemetry.addData("Arm Elbow Position", Arm_PhaseTwo.getCurrentPosition());
         telemetry.addData("Arm Twist Position", Arm_Twist.getCurrentPosition());
-        telemetry.addData("Arm Twist Starting Position", armTwistStartingPosition);
-        telemetry.addData("Claw Position", ServoClaw.getPosition());
+        telemetry.addData("Arm Claw Position", ServoClaw.getPosition());
+        telemetry.addLine("===================================");
     }
 
     private void drivetrainMaster() {
@@ -166,13 +165,16 @@ public class AssistedDriver extends OpMode
             twist = twist * 0.75;
         }
 
-        double[] wheelpower = calculateMecanum(drive, strafe, -twist);
+        double[] wheelpower = mecanum.calculate(drive, strafe, -twist, gamepad2.right_bumper);
 
         Drive_FrontLeft.setPower(wheelpower[0]);
         Drive_FrontRight.setPower(wheelpower[1]);
         Drive_RearLeft.setPower(wheelpower[2]);
         Drive_RearRight.setPower(wheelpower[3]);
 
+        telemetry.addLine("===================================");
+        telemetry.addLine("DriveTrain");
+        telemetry.addLine("===================================");
         telemetry.addData("Front Left Power", Drive_FrontLeft.getPower());
         telemetry.addData("Front Right Power", Drive_FrontRight.getPower());
         telemetry.addData("Rear Left Power", Drive_RearLeft.getPower());
@@ -182,6 +184,7 @@ public class AssistedDriver extends OpMode
         telemetry.addData("Front Right Position", Drive_FrontRight.getCurrentPosition());
         telemetry.addData("Rear Left Position", Drive_RearLeft.getCurrentPosition());
         telemetry.addData("Rear Right Position", Drive_RearRight.getCurrentPosition());
+        telemetry.addLine("===================================");
     }
 
     @Override
@@ -191,6 +194,4 @@ public class AssistedDriver extends OpMode
         telemetry.update();
     }
 
-    @Override
-    public void stop() {}
 }

@@ -35,6 +35,10 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
+import org.firstinspires.ftc.teamcode.util.ConfigManager;
+import org.firstinspires.ftc.teamcode.util.Mecanum;
+
+import java.io.IOException;
 
 
 /*
@@ -52,6 +56,9 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 @Autonomous(name="DriveForward", group="Into-The-Deep")
 
 public class DriveForward extends LinearOpMode {
+    Mecanum Mecanum = new Mecanum();
+    ConfigManager config = new ConfigManager("TeamCode/src/main/res/values/robot.properties");
+    ConfigManager devices = new ConfigManager("TeamCode/src/main/res/values/devices.properties");
     private DcMotor Drive_FrontLeft = null;
     private DcMotor Drive_FrontRight = null;
     private DcMotor Drive_RearLeft = null;
@@ -61,38 +68,18 @@ public class DriveForward extends LinearOpMode {
     // Declare OpMode members.
     private ElapsedTime runtime = new ElapsedTime();
 
-    private double[] calculateMecanum(double drive, double strafe, double twist) {
-        double frontleft = 0.0;
-        double frontright = 0.0;
-        double rearleft = 0.0;
-        double rearright = 0.0;
-
-        if (!gamepad2.right_bumper) {
-            double modifier = 1;
-            drive = drive * modifier;
-            strafe = strafe * modifier;
-            twist = twist * modifier;
-        }
-
-        // Calculate Powers
-        frontleft = drive + strafe + twist;
-        frontright = drive - strafe - twist;
-        rearleft = drive - strafe + twist;
-        rearright = drive + strafe + twist;
-
-        // Return Powers
-        return new double[]{frontleft, frontright, rearleft, rearright};
+    public DriveForward() throws IOException {
     }
 
     @Override
     public void runOpMode() {
         telemetry.addData("Status", "Initialized");
         telemetry.update();
-        
-        Drive_FrontLeft  = hardwareMap.get(DcMotor.class, "Drive_FrontLeft");
-        Drive_FrontRight = hardwareMap.get(DcMotor.class, "Drive_FrontRight");
-        Drive_RearLeft   = hardwareMap.get(DcMotor.class, "Drive_RearLeft");
-        Drive_RearRight  = hardwareMap.get(DcMotor.class, "Drive_RearRight");
+
+        Drive_FrontLeft  = hardwareMap.get(DcMotor.class, devices.getString("FrontLeft"));
+        Drive_FrontRight = hardwareMap.get(DcMotor.class, devices.getString("FrontRight"));
+        Drive_RearLeft   = hardwareMap.get(DcMotor.class, devices.getString("RearLeft"));
+        Drive_RearRight  = hardwareMap.get(DcMotor.class, devices.getString("RearRight"));
         Arm_Extend = hardwareMap.get(DcMotor.class, "Arm_Extend");
 
         // Initialize the hardware variables. Note that the strings used here as parameters
@@ -111,14 +98,14 @@ public class DriveForward extends LinearOpMode {
         while (opModeIsActive()) {
             // Choose to drive using either Tank Mode, or POV Mode
             // Comment out the method that's not used.  The default below is POV.
-            double[] wheelpower = calculateMecanum(0, 0, 0);
+            double[] wheelpower;
     
             if (runtime.time() <= 1 && runtime.time() >= 0) {
                 Arm_Extend.setPower(-0.5);
-                wheelpower = calculateMecanum(0, 0, 0);
+                wheelpower = Mecanum.calculate(0, 0, 0, gamepad2.right_bumper);
             } else {
                 Arm_Extend.setPower(0);
-                wheelpower = calculateMecanum(1, 0, 0);
+                wheelpower = Mecanum.calculate(1, 0, 0, gamepad2.right_bumper);
             }
 
             
