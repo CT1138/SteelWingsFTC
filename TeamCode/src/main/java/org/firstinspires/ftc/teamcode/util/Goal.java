@@ -13,12 +13,14 @@ public class Goal {
     private int[] positions;
 
     public Goal(DcMotor[] m_motors, Servo[] s_servo, int[] iPositions) {
-        this.motors = m_motors;
-        this.positions = iPositions;
-        this.servos = s_servo;
+        motors = m_motors;
+        positions = iPositions;
+        servos = s_servo;
     }
 
     public void RunToGoal(double power, double waitAfter) {
+        if(motors == null || servos == null || positions == null) return;
+
         for (int i = 0; i < motors.length; i++) {
             motors[i].setPower(power);
             motors[i].setTargetPosition(positions[i]);
@@ -30,6 +32,8 @@ public class Goal {
     }
 
     public boolean isBusy() {
+        if(motors == null || positions == null) return false;
+
         if (motors.length != positions.length) {
             throw new IllegalStateException("Motor and target position arrays must be the same size");
         }
