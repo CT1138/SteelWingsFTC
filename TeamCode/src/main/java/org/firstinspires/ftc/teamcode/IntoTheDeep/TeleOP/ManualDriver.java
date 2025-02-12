@@ -106,16 +106,7 @@ public class ManualDriver extends OpMode
 
         // Arm Twist using power and position limits
 
-        int twistFactor = 2;
-        if(gamepad2.left_bumper) twistFactor = 1;
-        if (gamepad2.dpad_left) {
-            armTwistPositionIndex = armTwistPositionIndex - twistFactor;
-        } else if (gamepad2.dpad_right) {
-            armTwistPositionIndex = armTwistPositionIndex + twistFactor;
-        }
-
-        int twistPosition = math.percentToPosition(ARM_TWIST_MIN, ARM_TWIST_MAX, armTwistPositionIndex);
-        Arm_Twist.setTargetPosition(twistPosition);
+        Arm_Twist.setPower(gamepad2.left_stick_x / 10);
 
         if (gamepad2.dpad_up || gamepad2.dpad_down) {
             if (gamepad2.dpad_up) {

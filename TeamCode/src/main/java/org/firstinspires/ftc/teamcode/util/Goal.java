@@ -7,47 +7,65 @@ import androidx.annotation.NonNull;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Servo;
 
-public class Goal {
-    private Servo[] servos;
-    private DcMotor[] motors;
-    private int[] positions;
+import java.util.Objects;
 
-    public Goal(DcMotor[] m_motors, Servo[] s_servo, int[] iPositions) {
-        motors = m_motors;
-        positions = iPositions;
-        servos = s_servo;
+public class Goal {
+    private String mfNname;
+    private Servo[] msServos;
+    private DcMotor[] mmMotors;
+    private int[] miPositions;
+
+    private double[] mdPowers;
+
+    public Goal(String asName, DcMotor[] amMotors, Servo[] asServos, int[] aiPositions, double[] aiPowers) {
+        mfNname = asName;
+        mmMotors = amMotors;
+        miPositions = aiPositions;
+        msServos = asServos;
+        mdPowers = aiPowers;
     }
 
-    public void RunToGoal(double power, double waitAfter) {
-        if(motors == null || servos == null || positions == null) return;
+    public void RunToGoal(boolean mbFloor, double mdPowerModifier) {
+        if(mmMotors == null || msServos == null || miPositions ==  null || mdPowers == null) return;
 
-        for (int i = 0; i < motors.length; i++) {
-            motors[i].setPower(power);
-            motors[i].setTargetPosition(positions[i]);
-            motors[i].setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        for (int i = 0; i < mmMotors.length; i++) {
+            double mdFinalPower = mdPowers[i] * mdPowerModifier;
+            mmMotors[i].setPower(mdFinalPower);
+            mmMotors[i].setTargetPosition(miPositions[i]);
+
+            // failsafe to ensure the arm does not underextend
+            if(Objects.equals(mmMotors[i].getDeviceName(), "Arm_Extend") && mbFloor) mmMotors[i].setPower(0);
+
+            mmMotors[i].setMode(DcMotor.RunMode.RUN_TO_POSITION);
         }
-        for (int i = 0; i < servos.length; i++) {
-            servos[i].setPosition(positions[motors.length + i]);
+        for (int i = 0; i < msServos.length; i++) {
+            msServos[i].setPosition(miPositions[mmMotors.length + i]);
         }
     }
 
     public boolean isBusy() {
-        if(motors == null || positions == null) return false;
+        if(mmMotors == null || miPositions == null) return false;
 
-        if (motors.length != positions.length) {
-            throw new IllegalStateException("Motor and target position arrays must be the same size");
+        if (mmMotors.length + msServos.length != miPositions.length) {
+            throw new IllegalStateException("Mismatch between motor and servo arrays and position array");
         }
-        for (int i = 0; i < motors.length; i++) {
-            if (motors[i].getMode() == DcMotor.RunMode.RUN_TO_POSITION) {
-                if (motors[i].isBusy()) {
+        for (int i = 0; i < mmMotors.length; i++) {
+            if (mmMotors[i].getMode() == DcMotor.RunMode.RUN_TO_POSITION) {
+                if (mmMotors[i].isBusy()) {
                     return true;
                 }
             } else {
-                if (motors[i].getCurrentPosition() != positions[i]) {
+                if (mmMotors[i].getCurrentPosition() != miPositions[i]) {
                     return true;
                 }
             }
         }
         return false;
+    }
+
+    @NonNull
+    @Override
+    public String toString() {
+        return mfNname;
     }
 }

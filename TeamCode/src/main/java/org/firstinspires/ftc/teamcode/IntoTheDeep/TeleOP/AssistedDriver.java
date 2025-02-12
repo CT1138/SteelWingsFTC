@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.IntoTheDeep.TeleOP; // package org.firstinspires.ftc.robotcontroller.external.samples;
 
+import android.util.Log;
+
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -12,10 +14,11 @@ import org.firstinspires.ftc.teamcode.util.ConfigManager;
 import org.firstinspires.ftc.teamcode.util.Goal;
 import org.firstinspires.ftc.teamcode.util.MathUtilities;
 import org.firstinspires.ftc.teamcode.util.Mecanum;
+import org.firstinspires.ftc.teamcode.util.CSVreader;
 
 import java.io.IOException;
 
-@TeleOp(name="Manual Driver", group="Into-The-Deep")
+@TeleOp(name="Assisted Driver", group="Into-The-Deep")
 public class AssistedDriver extends OpMode
 {
     // define the motors and whatnot
@@ -107,37 +110,56 @@ public class AssistedDriver extends OpMode
     }
 
     private void liftarmMaster() {
-        if (!DriverIsBusy) {
-            if (gamepad2.a) {
-                if (!isGoalRunning) {
-                    // Start a new goal sequence
-                    currentGoals = gameGoals.hang(1);
-                    if (currentGoals.length > 0) {
-                        currentGoalIndex = 0;
-                        currentGoal = currentGoals[currentGoalIndex];
-                        currentGoal.RunToGoal(1, 0);
-                        isGoalRunning = true;
-                    }
-                }
-            }
+        boolean mbFloor = LiftarmStop.isPressed();
+
+        if (gamepad2.left_bumper && gamepad2.right_bumper) {
+            Arm_Extend.setPower(0);
+            Arm_Twist.setPower(0);
+            Arm_PhaseTwo.setPower(0);
+            ServoClaw.setPosition(0.5);
         }
 
-        if (isGoalRunning) {
-            // Check if the current goal is still running
-            if (!currentGoal.isBusy()) {
-                // Current goal is finished, move to the next or reset
-                currentGoalIndex++;
-                if (currentGoalIndex < currentGoals.length) {
-                    currentGoal = currentGoals[currentGoalIndex];
-                    currentGoal.RunToGoal(1, 0);
-                } else {
-                    // All goals are finished
-                    isGoalRunning = false;
-                    currentGoal = null;
-                    currentGoals = null;
-                }
+        if (!DriverIsBusy && gamepad2.a && !isGoalRunning) {
+            // Start a new goal sequence
+            /*
+            Goal[] currentGoals =
+                {
+                    new Goal("Zero Position", motors, servos, new int[]{0, 0, 0, 1}, new double[]{0.8, 0.8, 0.8, 0.8}),
+                    new Goal("L1 Hang - Raise",motors, servos, new int[]{-4100, 430, 5, 1}, new double[]{0.8, 0.8, 0.8, 0.8}),
+                    new Goal("Zero Position",motors, servos, new int[]{0, 0, 0, 1}, new double[]{0.8, 0.8, 0.8, 0.8})
+                }; //gameGoals.level1Hang;
+             */
+            CSVreader objective_template = new CSVreader("TeamCode/src/main/assets/objective_template.csv", motors, servos);
+            Goal[] currentGoals = objective_template.readCSV();
+            gameGoals.executeObjective(telemetry, runtime, currentGoals, 2, mbFloor);
+        }
+
+        if (!DriverIsBusy && gamepad2.y && !isGoalRunning) {
+            System.out.println("Starting goal sequence");
+            // Start a new goal sequence
+            Goal[] currentGoals =
+                    {
+                            new Goal("Zero Position", motors, servos, new int[]{0, 0, 0, 1}, new double[]{0.8, 0.8, 0.8, 0.8}),
+                    }; //gameGoals.level1Hang;
+
+            gameGoals.executeObjective(telemetry, runtime, currentGoals, 2, mbFloor);
+        }
+
+        /*
+        if (isGoalRunning && !currentGoal.isBusy()) {
+            // Check if the current goal is still running and if Current goal is finished, move to the next or reset
+            currentGoalIndex++;
+            if (currentGoalIndex < currentGoals.length) {
+                currentGoal = currentGoals[currentGoalIndex];
+                currentGoal.RunToGoal(0.8, 2);
+            } else {
+                // All goals are finished
+                isGoalRunning = false;
+                currentGoal = null;
+                currentGoals = null;
             }
         }
+        */
 
         telemetry.addLine("===================================");
         telemetry.addLine("Arm Positions");

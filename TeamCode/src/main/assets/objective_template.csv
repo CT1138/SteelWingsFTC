@@ -1,0 +1,4 @@
+Name,Extend Position,Elbow Position,Twist Position,Extend Power,Elbow Power,Twist Power,Claw Open
+Zero Position,0,0,0,1,1,1,0
+Raise,-4100,430,5,1,1,1,0
+Zero Position,0,0,0,1,1,1,0
