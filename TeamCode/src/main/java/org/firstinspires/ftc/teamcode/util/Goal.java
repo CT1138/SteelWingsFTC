@@ -29,13 +29,14 @@ public class Goal {
         if(mmMotors == null || msServos == null || miPositions ==  null || mdPowers == null) return;
 
         for (int i = 0; i < mmMotors.length; i++) {
+
+            // Do not change anything if the power or position is -1 (indicates a skip)
+            if (mdPowers[i] == -1 || miPositions[i] == -1) continue;
+
+            // Set the power and positions if all else is clear
             double mdFinalPower = mdPowers[i] * mdPowerModifier;
-            mmMotors[i].setPower(mdFinalPower);
+            if(!Objects.equals(mmMotors[i].getDeviceName(), "Arm_Extend") && !mbFloor) mmMotors[i].setPower(mdFinalPower);
             mmMotors[i].setTargetPosition(miPositions[i]);
-
-            // failsafe to ensure the arm does not underextend
-            if(Objects.equals(mmMotors[i].getDeviceName(), "Arm_Extend") && mbFloor) mmMotors[i].setPower(0);
-
             mmMotors[i].setMode(DcMotor.RunMode.RUN_TO_POSITION);
         }
         for (int i = 0; i < msServos.length; i++) {
