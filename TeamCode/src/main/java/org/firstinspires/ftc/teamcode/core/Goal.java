@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.util;
+package org.firstinspires.ftc.teamcode.core;
 
 import static java.lang.Thread.sleep;
 
@@ -10,12 +10,12 @@ import com.qualcomm.robotcore.hardware.Servo;
 import java.util.Objects;
 
 public class Goal {
-    private String mfNname;
-    private Servo[] msServos;
-    private DcMotor[] mmMotors;
-    private int[] miPositions;
+    private final String mfNname;
+    private final Servo[] msServos;
+    private final DcMotor[] mmMotors;
+    private final int[] miPositions;
 
-    private double[] mdPowers;
+    private final double[] mdPowers;
 
     public Goal(String asName, DcMotor[] amMotors, Servo[] asServos, int[] aiPositions, double[] aiPowers) {
         mfNname = asName;

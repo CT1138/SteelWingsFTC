@@ -1,7 +1,5 @@
 package org.firstinspires.ftc.teamcode.IntoTheDeep.TeleOP; // package org.firstinspires.ftc.robotcontroller.external.samples;
 
-import android.util.Log;
-
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -10,11 +8,10 @@ import com.qualcomm.robotcore.hardware.TouchSensor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.IntoTheDeep.GameGoals;
-import org.firstinspires.ftc.teamcode.util.ConfigManager;
-import org.firstinspires.ftc.teamcode.util.Goal;
-import org.firstinspires.ftc.teamcode.util.MathUtilities;
+
+import org.firstinspires.ftc.teamcode.core.Goal;
+
 import org.firstinspires.ftc.teamcode.util.Mecanum;
-import org.firstinspires.ftc.teamcode.util.CSVreader;
 
 import java.io.IOException;
 
@@ -23,30 +20,11 @@ public class AssistedDriver extends OpMode
 {
     // define the motors and whatnot
     Mecanum mecanum = new Mecanum();
-    MathUtilities math = new MathUtilities();
-    ConfigManager config = new ConfigManager("TeamCode/src/main/res/raw/robot.properties");
-    ConfigManager devices = new ConfigManager("TeamCode/src/main/res/raw/devices.properties");
     private DcMotor[] motors;
     private Servo[] servos;
     private GameGoals gameGoals;
     private Boolean DriverIsBusy = false;
     private boolean isGoalRunning = false;
-    private Goal currentGoal = null;
-    private int currentGoalIndex = 0;
-    private Goal[] currentGoals = null;
-    private final int ARM_TWIST_MIN   = config.getInt("ARM_TWIST_MIN"); //-140; // Equivalent to -180 degrees
-    private final int ARM_TWIST_MAX   = config.getInt("ARM_TWIST_MAX"); //140;  // Equivalent to 180 degrees
-    private int armTwistPositionIndex = 0;
-    private int armTwistStartingPosition     = config.getInt("ARM_TWIST_START");
-
-    private final int ARM_EXTEND_MIN = config.getInt("ARM_EXTEND_MIN");
-    private final int ARM_EXTEND_MAX = config.getInt("ARM_EXTEND_MAX");
-    private int armExtendStartingPosition   = config.getInt("ARM_EXTEND_START");
-
-    private final int ARM_ELBOW_MIN = config.getInt("ARM_ELBOW_MIN");
-    private final int ARM_ELBOW_MAX = config.getInt("ARM_ELBOW_MAX");
-    private int armElbowStartingPosition = config.getInt("ARM_ELBOW_START");
-
     private final ElapsedTime runtime = new ElapsedTime();
     private DcMotor Drive_FrontLeft = null;
     private DcMotor Drive_FrontRight = null;
@@ -105,8 +83,6 @@ public class AssistedDriver extends OpMode
     public void start() {
         runtime.reset();
         ServoClaw.setPosition(1);
-        armExtendStartingPosition = Arm_Extend.getCurrentPosition();
-        armElbowStartingPosition = Arm_PhaseTwo.getCurrentPosition();
     }
 
     private void liftarmMaster() {
@@ -119,47 +95,18 @@ public class AssistedDriver extends OpMode
             ServoClaw.setPosition(0.5);
         }
 
-        if (!DriverIsBusy && gamepad2.a && !isGoalRunning) {
-            // Start a new goal sequence
-            /*
-            Goal[] currentGoals =
-                {
-                    new Goal("Zero Position", motors, servos, new int[]{0, 0, 0, 1}, new double[]{0.8, 0.8, 0.8, 0.8}),
-                    new Goal("L1 Hang - Raise",motors, servos, new int[]{-4100, 430, 5, 1}, new double[]{0.8, 0.8, 0.8, 0.8}),
-                    new Goal("Zero Position",motors, servos, new int[]{0, 0, 0, 1}, new double[]{0.8, 0.8, 0.8, 0.8})
-                }; //gameGoals.level1Hang;
-             */
-            CSVreader objective_template = new CSVreader("TeamCode/src/main/assets/objective_template.csv", motors, servos);
-            Goal[] currentGoals = objective_template.readCSV();
+        if (gamepad2.a) {
+            Goal[] currentGoals = gameGoals.level1Hang;
             gameGoals.executeObjective(telemetry, runtime, currentGoals, 2, mbFloor);
         }
 
-        if (!DriverIsBusy && gamepad2.y && !isGoalRunning) {
+        if (gamepad2.y) {
             System.out.println("Starting goal sequence");
             // Start a new goal sequence
-            Goal[] currentGoals =
-                    {
-                            new Goal("Zero Position", motors, servos, new int[]{0, 0, 0, 1}, new double[]{0.8, 0.8, 0.8, 0.8}),
-                    }; //gameGoals.level1Hang;
+            Goal[] currentGoals = gameGoals.zeroPosition;
 
             gameGoals.executeObjective(telemetry, runtime, currentGoals, 2, mbFloor);
         }
-
-        /*
-        if (isGoalRunning && !currentGoal.isBusy()) {
-            // Check if the current goal is still running and if Current goal is finished, move to the next or reset
-            currentGoalIndex++;
-            if (currentGoalIndex < currentGoals.length) {
-                currentGoal = currentGoals[currentGoalIndex];
-                currentGoal.RunToGoal(0.8, 2);
-            } else {
-                // All goals are finished
-                isGoalRunning = false;
-                currentGoal = null;
-                currentGoals = null;
-            }
-        }
-        */
 
         telemetry.addLine("===================================");
         telemetry.addLine("Arm Positions");

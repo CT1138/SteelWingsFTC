@@ -1,19 +1,14 @@
 package org.firstinspires.ftc.teamcode.IntoTheDeep;
 
-import android.os.Build;
-
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
-import org.firstinspires.ftc.teamcode.util.Goal;
+import org.firstinspires.ftc.teamcode.core.Goal;
 import org.firstinspires.ftc.teamcode.util.ConfigManager;
 
-import java.io.BufferedWriter;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 
 public class GameGoals {
     // Array Reference:
@@ -60,13 +55,13 @@ public class GameGoals {
 
             // Keep the script busy for the set pause time
             while(goal.isBusy()) {
-                System.out.println(goal.toString());
+                System.out.println(goal);
             }
 
             // Reset once more to be sure
             runtime.reset();
             while(runtime.seconds() < PostWaitTime) {
-                telemetry.addLine("Running goal" + goal.toString());
+                telemetry.addLine("Running goal" + goal);
                 telemetry.update();
             };
         }

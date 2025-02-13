@@ -10,7 +10,6 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 import org.firstinspires.ftc.teamcode.util.ConfigManager;
 import org.firstinspires.ftc.teamcode.util.Mecanum;
 import org.firstinspires.ftc.teamcode.util.MathUtilities;
-import org.firstinspires.ftc.teamcode.util.Goal;
 
 import java.io.IOException;
 
