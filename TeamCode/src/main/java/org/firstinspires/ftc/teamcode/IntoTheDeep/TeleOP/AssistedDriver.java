@@ -3,43 +3,38 @@ package org.firstinspires.ftc.teamcode.IntoTheDeep.TeleOP; // package org.firsti
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.TouchSensor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
-import org.firstinspires.ftc.teamcode.IntoTheDeep.GameGoals;
+import org.firstinspires.ftc.teamcode.clubFair.FairObjectives;
 
-import org.firstinspires.ftc.teamcode.core.Goal;
-
+import org.firstinspires.ftc.teamcode.core.Objective;
 import org.firstinspires.ftc.teamcode.util.Mecanum;
 
-import java.io.IOException;
+import java.util.Objects;
 
 @TeleOp(name="Assisted Driver", group="Into-The-Deep")
 public class AssistedDriver extends OpMode
 {
     // define the motors and whatnot
+    Objective currentObjective = null;
     Mecanum mecanum = new Mecanum();
-    private DcMotor[] motors;
-    private Servo[] servos;
-    private GameGoals gameGoals;
-    private Boolean DriverIsBusy = false;
-    private boolean isGoalRunning = false;
+    private DcMotor[] miMotors;
+    private Servo[] miServos;
+    private FairObjectives fairObjectives;
     private final ElapsedTime runtime = new ElapsedTime();
+    private final ElapsedTime objectiveRuntime = new ElapsedTime();
     private DcMotor Drive_FrontLeft = null;
     private DcMotor Drive_FrontRight = null;
     private DcMotor Drive_RearLeft = null;
     private DcMotor Drive_RearRight = null;
     private DcMotor Arm_Extend = null;
     private DcMotor Arm_PhaseTwo = null;
-
     private DcMotor Arm_Twist = null;
-
     private Servo ServoClaw = null;
     private TouchSensor LiftarmStop = null;
-
-    public AssistedDriver() throws IOException {
-    }
 
     @Override
     public void init() {
@@ -65,60 +60,92 @@ public class AssistedDriver extends OpMode
         Arm_PhaseTwo.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         Arm_Extend.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        Arm_Extend.setDirection(DcMotorSimple.Direction.REVERSE);
 
         Drive_FrontLeft.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         Drive_FrontRight.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         Drive_RearRight.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         Drive_RearLeft.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        motors = new DcMotor[]{Arm_Extend, Arm_PhaseTwo, Arm_Twist};
-        servos = new Servo[]{ServoClaw};
-        try {
-            gameGoals = new GameGoals(motors, servos);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
+        miMotors = new DcMotor[]{Arm_Extend, Arm_PhaseTwo, Arm_Twist};
+        miServos = new Servo[]{ServoClaw};
 
-    private void initTasks() {
+        fairObjectives = new FairObjectives(miMotors, miServos);
     }
 
     @Override
     public void start() {
+        objectiveRuntime.reset();
         runtime.reset();
         ServoClaw.setPosition(1);
     }
 
+    private boolean canMoveOn() {
+        for (DcMotor mdMotor : miMotors) if (mdMotor.isBusy() && mdMotor.getCurrentPosition() != mdMotor.getTargetPosition()) return false;
+        return true;
+    }
+
     private void liftarmMaster() {
-        boolean mbFloor = LiftarmStop.isPressed();
+            boolean mbFloor = LiftarmStop.isPressed();
+            int miButtonPressDelay = 1;
 
-        if (gamepad2.left_bumper && gamepad2.right_bumper) {
-            Arm_Extend.setPower(0);
-            Arm_Twist.setPower(0);
-            Arm_PhaseTwo.setPower(0);
-            ServoClaw.setPosition(0.5);
-        }
+        // Objective Declarations
+            Objective foZero = fairObjectives.foZero(1);
+            Objective foWave = fairObjectives.foWave(0.75);
+            Objective foGrabFromFloor = fairObjectives.foGrabFromFloor(1);
+            Objective foGrabFromLowerRung = fairObjectives.foGrabFromLowerRung(1);
 
-        if (gamepad2.a) {
-            Goal[] currentGoals = gameGoals.level1Hang;
-            gameGoals.executeObjective(telemetry, runtime, currentGoals, 2, mbFloor);
-        }
+        // ========================
+        // BEGIN OBJECTIVE CONTROLS
+        // ========================
 
-        if (gamepad2.y) {
-            System.out.println("Starting goal sequence");
-            // Start a new goal sequence
-            Goal[] currentGoals = gameGoals.zeroPosition;
+        // STOP EVERYTHING
+        // Control = Left Bumper + Right Bumper + Back
+            if (gamepad2.left_bumper && gamepad2.right_bumper && gamepad2.back) {
+                if (currentObjective != null) currentObjective.stop();
 
-            gameGoals.executeObjective(telemetry, runtime, currentGoals, 2, mbFloor);
-        }
+                Arm_Extend.setPower(0);
+                Arm_Twist.setPower(0);
+                Arm_PhaseTwo.setPower(0);
+                Arm_Extend.setTargetPosition(Arm_Extend.getCurrentPosition());
+                Arm_Twist.setTargetPosition(Arm_Twist.getCurrentPosition());
+                Arm_PhaseTwo.setTargetPosition(Arm_PhaseTwo.getCurrentPosition());
+            }
 
-        telemetry.addLine("===================================");
-        telemetry.addLine("Arm Positions");
-        telemetry.addLine("===================================");
-        telemetry.addData("Arm Extend Position", Arm_Extend.getCurrentPosition());
-        telemetry.addData("Arm Elbow Position", Arm_PhaseTwo.getCurrentPosition());
-        telemetry.addData("Arm Twist Position", Arm_Twist.getCurrentPosition());
-        telemetry.addData("Arm Claw Position", ServoClaw.getPosition());
-        telemetry.addLine("===================================");
+        // Wave at the viewer!
+        // Control = A
+            if (canMoveOn() && gamepad2.a && runtime.seconds() > miButtonPressDelay) {
+                runtime.reset();
+                currentObjective = foWave;
+                foWave.run(objectiveRuntime, mbFloor);
+            }
+
+        // Grab Sample From Lower Rung
+        // Control = B + Dpad_Left
+            if (canMoveOn() && gamepad2.b && gamepad2.dpad_left && runtime.seconds() > miButtonPressDelay) {
+                runtime.reset();
+                currentObjective = foGrabFromLowerRung;
+                foGrabFromLowerRung.run(objectiveRuntime, mbFloor);
+            }
+
+        // Grab Sample From Floor
+        // Control = B + Dpad_Down
+            if (canMoveOn() && gamepad2.b && gamepad2.dpad_down && runtime.seconds() > miButtonPressDelay) {
+                runtime.reset();
+                currentObjective = foGrabFromFloor;
+                foGrabFromFloor.run(objectiveRuntime, mbFloor);
+            }
+
+        // Return Motors to Zero
+        // Control = Back
+            if (canMoveOn() && gamepad2.back && runtime.seconds() > miButtonPressDelay) {
+                runtime.reset();
+                currentObjective = foZero;
+                foZero.run(objectiveRuntime, mbFloor);
+            }
+
+        // ======================
+        // END OBJECTIVE CONTROLS
+        // ======================
     }
 
     private void drivetrainMaster() {
@@ -139,16 +166,18 @@ public class AssistedDriver extends OpMode
         if (gamepad1.x) twist = -1 + modifier;
         if (gamepad1.b) twist = 1 - modifier;
 
+        double mdSlowerPowerModifier = 0.5;
         if (slower) {
-            drive = drive * 0.5;
-            strafe = strafe * 0.5;
-            twist = strafe * 0.5;
+            drive = drive * mdSlowerPowerModifier;
+            strafe = strafe * mdSlowerPowerModifier;
+            twist = strafe * mdSlowerPowerModifier;
         }
 
+        double mdSlowPowerModifier = 0.75;
         if (!slow) {
-            drive = drive * 0.75;
-            strafe = strafe * 0.75;
-            twist = twist * 0.75;
+            drive = drive * mdSlowPowerModifier;
+            strafe = strafe * mdSlowPowerModifier;
+            twist = twist * mdSlowPowerModifier;
         }
 
         double[] wheelpower = mecanum.calculate(drive, strafe, -twist, gamepad2.right_bumper);
@@ -157,7 +186,25 @@ public class AssistedDriver extends OpMode
         Drive_FrontRight.setPower(wheelpower[1]);
         Drive_RearLeft.setPower(wheelpower[2]);
         Drive_RearRight.setPower(wheelpower[3]);
+    }
 
+    @Override
+    public void loop() {
+        liftarmMaster();
+        drivetrainMaster();
+
+        telemetry.addLine("===================================");
+        telemetry.addLine("Arm Positions");
+        telemetry.addLine("===================================");
+        telemetry.addData("Arm Extend Position", Arm_Extend.getCurrentPosition());
+        telemetry.addData("Arm Extend Target Position", Arm_Extend.getTargetPosition());
+        telemetry.addData("Arm Elbow Position", Arm_PhaseTwo.getCurrentPosition());
+        telemetry.addData("Arm Elbow Target Position", Arm_PhaseTwo.getTargetPosition());
+        telemetry.addData("Arm Twist Position", Arm_Twist.getCurrentPosition());
+        telemetry.addData("Arm Twist Target Position", Arm_Twist.getTargetPosition());
+        telemetry.addData("Arm Claw Position", ServoClaw.getPosition());
+        telemetry.addLine("===================================");
+        telemetry.addLine("");
         telemetry.addLine("===================================");
         telemetry.addLine("DriveTrain");
         telemetry.addLine("===================================");
@@ -165,18 +212,13 @@ public class AssistedDriver extends OpMode
         telemetry.addData("Front Right Power", Drive_FrontRight.getPower());
         telemetry.addData("Rear Left Power", Drive_RearLeft.getPower());
         telemetry.addData("Rear Right Power", Drive_RearRight.getPower());
-
+        telemetry.addLine("");
         telemetry.addData("Front Left Position", Drive_FrontLeft.getCurrentPosition());
         telemetry.addData("Front Right Position", Drive_FrontRight.getCurrentPosition());
         telemetry.addData("Rear Left Position", Drive_RearLeft.getCurrentPosition());
         telemetry.addData("Rear Right Position", Drive_RearRight.getCurrentPosition());
         telemetry.addLine("===================================");
-    }
 
-    @Override
-    public void loop() {
-        liftarmMaster();
-        drivetrainMaster();
         telemetry.update();
     }
 

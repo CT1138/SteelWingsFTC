@@ -105,7 +105,7 @@ public class ManualDriver extends OpMode
 
         // Arm Twist using power and position limits
 
-        Arm_Twist.setPower(gamepad2.left_stick_x / 10);
+        Arm_Twist.setPower(gamepad2.left_stick_x / 4);
 
         if (gamepad2.dpad_up || gamepad2.dpad_down) {
             if (gamepad2.dpad_up) {

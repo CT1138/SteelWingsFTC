@@ -1,17 +1,19 @@
 package org.firstinspires.ftc.teamcode.core;
 
+import com.qualcomm.robotcore.hardware.DcMotor;
+
 public class Task {
     private final String mfNname;
     private final double[] mdServoPositions;
     private final int[] mdMotorPositions;
-    private final double[] mdMotorPowers;
+    private final double mdMotorPower;
     private final int miWaitFor;
 
-    public Task(String asName, double[] adServoPositions, int[] aiMotorPositions, double[] adMotorPowers, int aiWaitFor) {
+    public Task(String asName, double[] adServoPositions, int[] aiMotorPositions, double adMotorPower, int aiWaitFor) {
         mfNname = asName;
         mdServoPositions = adServoPositions;
         mdMotorPositions = aiMotorPositions;
-        mdMotorPowers = adMotorPowers;
+        mdMotorPower = adMotorPower;
         miWaitFor = aiWaitFor;
     }
 
@@ -36,12 +38,9 @@ public class Task {
         return mdMotorPositions[miIndex];
     }
 
-    // Get Motor Powers
-    public final double[] motorPowers() {
-        return mdMotorPowers;
-    }
-    public final double motorPower(int miIndex) {
-        return mdMotorPowers[miIndex];
+    // Get Motor Power
+    public final double motorPower() {
+        return mdMotorPower;
     }
 
     // Get Delay Time
