@@ -19,6 +19,8 @@ public class GameGoals {
     private Servo[] servos;
     public final Goal[] level1Hang = {
             new Goal("L1 Hang - Raise",motors, servos, new int[]{500, 29, 0, 1}, new double[]{0.8, 0.8, 0.8, 0.8}),
+            new Goal("L1 Hang - Lift", motors, servos, new int[]{800, 400, -1, 1}, new double[]{0.8, 0.8, 0.8, 0.8}),
+            new Goal("L1 Hang - Lift", motors, servos, new int[]{-1, 450, -1, 1}, new double[]{0.8, 0.8, 0.8, 0.8}),
             new Goal("L1 Hang - Lift", motors, servos, new int[]{0, 29, 0, 1}, new double[]{0.8, 0.8, 0.8, 0.8})
     };
     public final Goal[] level2Hang = {

@@ -79,6 +79,9 @@ public class AssistedDriver extends OpMode
         }
     }
 
+    private void initTasks() {
+    }
+
     @Override
     public void start() {
         runtime.reset();
