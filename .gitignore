@@ -1,3 +1,15 @@
+# CUSTOM
+.github/
+.gradle/
+.idea/
+.doc/
+.gradle/
+.libs/
+FtcRobotController/
+TeamCode/build/
+TeamCode/lib/
+
+
 # Built application files
 *.apk
 *.aar
