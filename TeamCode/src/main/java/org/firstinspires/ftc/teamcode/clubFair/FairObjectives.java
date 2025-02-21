@@ -6,8 +6,8 @@ import org.firstinspires.ftc.teamcode.core.Task;
 import org.firstinspires.ftc.teamcode.core.Objective;
 
 public class FairObjectives {
-    private final DcMotor[] miMotors;
-    private final Servo[] miServos;
+    private final DcMotor[] moMotors;
+    private final Servo[] moServos;
 
     // Positions for Reference
     private final int miElbowUp = 860;
@@ -17,9 +17,9 @@ public class FairObjectives {
     private final int miWristRightMax = 140;
     private final int miExtendMax = 4100;
 
-    public FairObjectives(DcMotor[] aiMotors, Servo[] aiServos) {
-        miMotors = aiMotors;
-        miServos = aiServos;
+    public FairObjectives(DcMotor[] aoMotors, Servo[] aoServos) {
+        moMotors = aoMotors;
+        moServos = aoServos;
     }
 
     // ========================
@@ -28,59 +28,59 @@ public class FairObjectives {
 
 
     // Say Hi!
-    public final Objective foWave(double mdArmPower) {
+    public final Objective foWave(double adArmPower) {
         // Build Tasks Array
-        Task[] miTasks = {
+        Task[] moTasks = {
          // new Task(name,                  servoPositions,     motorPositions,            motorPowers,     waitFor)
-            new Task("Raise Arm",   new double[]{1.0},  new int[]{200, -1, -1},    mdArmPower, 4),
+            new Task("Raise Arm",   new double[]{1.0},  new int[]{200, -1, -1},    adArmPower, 4),
 
-            new Task("Wave Up",     new double[]{0},    new int[]{-1, 430, 100},     mdArmPower * 0.5, 0),
-            new Task("Wave down",     new double[]{1.0},  new int[]{-1, 560, -100},    mdArmPower * 0.5, 0),
-            new Task("Wave Up",     new double[]{0},    new int[]{-1, 430, 100},     mdArmPower * 0.5, 0),
-            new Task("Wave down",     new double[]{1.0},  new int[]{-1, 560, -100},    mdArmPower * 0.5, 0),
-            new Task("Wave Up",     new double[]{0},    new int[]{-1, 430, 100},     mdArmPower * 0.5, 0),
-            new Task("Wave down",     new double[]{1.0},  new int[]{-1, 560, -100},    mdArmPower * 0.5, 0),
+            new Task("Wave Up",     new double[]{0},    new int[]{-1, 430, 100},     adArmPower * 0.5, 0),
+            new Task("Wave down",     new double[]{1.0},  new int[]{-1, 560, -100},    adArmPower * 0.5, 0),
+            new Task("Wave Up",     new double[]{0},    new int[]{-1, 430, 100},     adArmPower * 0.5, 0),
+            new Task("Wave down",     new double[]{1.0},  new int[]{-1, 560, -100},    adArmPower * 0.5, 0),
+            new Task("Wave Up",     new double[]{0},    new int[]{-1, 430, 100},     adArmPower * 0.5, 0),
+            new Task("Wave down",     new double[]{1.0},  new int[]{-1, 560, -100},    adArmPower * 0.5, 0),
 
-            new Task("Hold Arm",    new double[]{1.0},  new int[]{-1, -1, -1},       mdArmPower, 2),
+            new Task("Hold Arm",    new double[]{1.0},  new int[]{-1, -1, -1},       adArmPower, 2),
 
-            new Task("Zero Arm",    new double[]{1.0},  new int[]{0, 0, 0},          mdArmPower, 0)
+            new Task("Zero Arm",    new double[]{1.0},  new int[]{0, 0, 0},          adArmPower, 0)
         };
 
         // Return the array of tasks as an objective object
-        return new Objective(miMotors, miServos, miTasks);
+        return new Objective(moMotors, moServos, moTasks);
     }
 
     // Grab Sample From Floor
-    public final Objective foGrabFromFloor(double mdArmPower) {
+    public final Objective foGrabFromFloor(double adArmPower) {
 
-        Task[] miTasks = {
-            new Task("Get into Position", new double[]{0.0}, new int[]{0, 0, 0}, mdArmPower, 0),
-            new Task("Grab", new double[]{1.0}, new int[]{-1, -1, -1}, mdArmPower, 1)
+        Task[] moTasks = {
+            new Task("Get into Position", new double[]{0.0}, new int[]{0, 0, 0}, adArmPower, 0),
+            new Task("Grab", new double[]{1.0}, new int[]{-1, -1, -1}, adArmPower, 1)
         };
 
-        return new Objective(miMotors, miServos, miTasks);
+        return new Objective(moMotors, moServos, moTasks);
     }
 
     // Grab Sample From Lower Rung
-    public final Objective foGrabFromLowerRung(double mdArmPower) {
-        Task[] miTasks = {
-            new Task("Get into Position", new double[]{0.0}, new int[]{0, miElbowForward, 0}, mdArmPower, 0),
-            new Task("Grab", new double[]{1.0}, new int[]{-1, -1, -1}, mdArmPower, 1),
-            new Task("Raise While Holding it", new double[]{1.0}, new int[]{200, -1, -1}, mdArmPower, 0),
-            new Task("Return to Zero", new double[]{1.0}, new int[]{0, 0, 0}, mdArmPower, 0)
+    public final Objective foGrabFromLowerRung(double adArmPower) {
+        Task[] moTasks = {
+            new Task("Get into Position", new double[]{0.0}, new int[]{0, miElbowForward, 0}, adArmPower, 0),
+            new Task("Grab", new double[]{1.0}, new int[]{-1, -1, -1}, adArmPower, 1),
+            new Task("Raise While Holding it", new double[]{1.0}, new int[]{200, -1, -1}, adArmPower, 0),
+            new Task("Return to Zero", new double[]{1.0}, new int[]{0, 0, 0}, adArmPower, 0)
         };
 
-        return new Objective(miMotors, miServos, miTasks);
+        return new Objective(moMotors, moServos, moTasks);
     }
 
     // Return to Zero Positions
-    public final Objective foZero(double mdArmPower) {
+    public final Objective foZero(double aoArmPower) {
         // Build Tasks Array
-        Task[] miTasks = {
+        Task[] moTasks = {
          // new Task(name,                  servoPositions,      motorPositions,        motorPower       waitFor)
-            new Task("Raise Arm",   new double[]{-1.0},  new int[]{0, 0, 0},    mdArmPower,   0),
+            new Task("Raise Arm",   new double[]{-1.0},  new int[]{0, 0, 0},    aoArmPower,   0),
         };
-        return new Objective(miMotors, miServos, miTasks);
+        return new Objective(moMotors, moServos, moTasks);
     }
 
     // ======================

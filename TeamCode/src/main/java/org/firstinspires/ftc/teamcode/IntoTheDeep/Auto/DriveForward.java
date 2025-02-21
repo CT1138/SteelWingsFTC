@@ -56,7 +56,7 @@ import java.io.IOException;
 @Autonomous(name="DriveForward", group="Into-The-Deep")
 
 public class DriveForward extends LinearOpMode {
-    Mecanum Mecanum = new Mecanum();
+    Mecanum Mecanum = new Mecanum(0.75);
     ConfigManager config = new ConfigManager("TeamCode/src/main/res/values/robot.properties");
     ConfigManager devices = new ConfigManager("TeamCode/src/main/res/values/devices.properties");
     private DcMotor Drive_FrontLeft = null;
@@ -102,10 +102,10 @@ public class DriveForward extends LinearOpMode {
     
             if (runtime.time() <= 1 && runtime.time() >= 0) {
                 Arm_Extend.setPower(-0.5);
-                wheelpower = Mecanum.calculate(0, 0, 0, gamepad2.right_bumper);
+                wheelpower = Mecanum.Calculate(0, 0, 0, gamepad2.right_bumper);
             } else {
                 Arm_Extend.setPower(0);
-                wheelpower = Mecanum.calculate(1, 0, 0, gamepad2.right_bumper);
+                wheelpower = Mecanum.Calculate(1, 0, 0, gamepad2.right_bumper);
             }
 
             

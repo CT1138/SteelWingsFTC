@@ -47,7 +47,7 @@ public class ZeroMotor extends LinearOpMode {
             telemetry.addLine("Motor " + m.getDeviceName() + " has been zeroed.");
             telemetry.update();
             while(m.isBusy() && m.getCurrentPosition() == m.getTargetPosition()) {
-
+                Thread.yield();
             }
         }
 

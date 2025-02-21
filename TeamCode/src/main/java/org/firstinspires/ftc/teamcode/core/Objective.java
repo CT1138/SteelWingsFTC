@@ -5,86 +5,107 @@ import com.qualcomm.robotcore.hardware.Servo;
 
 import com.qualcomm.robotcore.util.ElapsedTime;
 
-import org.firstinspires.ftc.robotcore.external.Telemetry;
-
 import java.util.Objects;
 
 public class Objective {
-    private final DcMotor[] miMotors;
-    private final Servo[] miServos;
-    private final Task[] miTasks;
-    private volatile boolean canRun = true;
+    private final DcMotor[] moMotors;
+    private final Servo[] moServos;
+    private final Task[] moTasks;
+    private volatile boolean mbCanRun = true;
 
-    public Objective(DcMotor[] aiMotors, Servo[] aiServos, Task[] aiTasks) {
-        miMotors = aiMotors;
-        miServos = aiServos;
-        miTasks = aiTasks;
+    /**
+     * Constructor for Objective
+     * @param aoMotors An array of motors your sequence of tasks will use. This can use as many or as few motors you want, depending on what you need this objective to do.
+     * @param aoServos An array of servos your sequence of tasks will use. This can use as many or as few motors you want, depending on what you need this objective to do.
+     * @param aoTasks An array of tasks your sequence of tasks will use. Each task must have the same amount of motors and servos as the rest, an error will be thrown if there is a mismatch.
+     */
+    public Objective(DcMotor[] aoMotors, Servo[] aoServos, Task[] aoTasks) {
+        moMotors = aoMotors;
+        moServos = aoServos;
+        moTasks = aoTasks;
+
+        if(!sequenceIsValid()) throw new IllegalArgumentException("Sequence is not valid");
     }
 
     /**
      * Method to execute the sequence of tasks this object stores
      * @author June
-     * @param runtime input for handling time operations
+     * @param aoRuntime input for handling time operations
      * @param abFloor boolean representing the touch sensor that checks if Arm_Extend has bottomed out
      */
-    public void run(ElapsedTime runtime, boolean abFloor) {
-        for (Task mtTask : miTasks) {
-            if(!canRun) break;
+    public void run(ElapsedTime aoRuntime, boolean abFloor) {
+        for (Task moTask : moTasks) {
+            if(!mbCanRun) break;
             // Task
             // Telemetry
-            System.out.println("Running task " + mtTask.name());
+            System.out.println("Running task " + moTask.name());
 
             // Set Value per motor
-            for (int iMotor = 0; iMotor < miMotors.length; iMotor++) {
-                if(!canRun) break;
-                if (mtTask.motorPosition(iMotor) == -1) continue; // Skip if -1 (indicates a skip)
-                DcMotor mdMotor = miMotors[iMotor];
+            for (int miMotorIndex = 0; miMotorIndex < moMotors.length; miMotorIndex++) {
+                if(!mbCanRun) break;
+                if (moTask.motorPosition(miMotorIndex) == -1) continue; // Skip if -1 (indicates a skip)
+                DcMotor mdMotor = moMotors[miMotorIndex];
 
                 // If the current motor is "Arm_Extend", check to make sure the arm will not under-extend when this task is performed
-                if (abFloor && Objects.equals(mdMotor.getDeviceName(), "Arm_Extend") && mtTask.motorPosition(iMotor) < 0)
+                if (abFloor && Objects.equals(mdMotor.getDeviceName(), "Arm_Extend") && moTask.motorPosition(miMotorIndex) < 0)
                     continue;
 
                 // Assign Power and Position
-                double mdPower = mtTask.motorPower();
+                double mdPower = moTask.motorPower();
                 mdMotor.setPower(mdPower);
-                double mdPosition = mtTask.motorPosition(iMotor);
+                double mdPosition = moTask.motorPosition(miMotorIndex);
                 mdMotor.setTargetPosition((int) mdPosition);
 
                 // Make sure it is in RUN_TO_POSITION mode
                 mdMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
             }
 
-            for (int iServo = 0; iServo < miServos.length; iServo++) {
-                if(!canRun) break;
-                if (mtTask.servoPosition(iServo) == -1) continue; // Skip if -1 (indicates a skip)
+            for (int miServoIndex = 0; miServoIndex < moServos.length; miServoIndex++) {
+                if(!mbCanRun) break;
+                if (moTask.servoPosition(miServoIndex) == -1) continue; // Skip if -1 (indicates a skip)
 
-                Servo miServo = miServos[iServo];
+                Servo miServo = moServos[miServoIndex];
 
                 // Apply Position
-                miServo.setPosition(mtTask.servoPosition(iServo));
+                miServo.setPosition(moTask.servoPosition(miServoIndex));
             }
 
             // Delay for set time after action
-            while (isBusy(mtTask)) {
-                if(!canRun) break;
+            while (isBusy(moTask)) {
+                if(!mbCanRun) break;
                 Thread.yield();
             }
 
-            runtime.reset();
+            aoRuntime.reset();
 
-            double mdWaitTime = mtTask.waitFor() * mtTask.motorPower();
-            while (runtime.seconds() < mdWaitTime) {
-                if(!canRun) break;
+            double mdWaitTime = moTask.waitFor() * moTask.motorPower();
+            while (aoRuntime.seconds() < mdWaitTime) {
+                if(!mbCanRun) break;
                 Thread.yield();
             }
         }
     }
 
+    /**
+     * Method to check to see if each motor in the objective has reached its position or not
+     * @return if any motors are busy or not at their target position, return false. Otherwise, return true.
+     */
+    public boolean canMoveOn() {
+        for (DcMotor moMotor : moMotors) if (moMotor.isBusy() && moMotor.getCurrentPosition() != moMotor.getTargetPosition()) return false;
+        return true;
+    }
+
+    /**
+     * Method to stop the sequence while executing
+     */
     public void stop() {
-        canRun = false;
-        for (DcMotor motor : miMotors) {
+        mbCanRun = false;
+        for (DcMotor motor : moMotors) {
             motor.setPower(0);
             motor.setTargetPosition(motor.getCurrentPosition());
+        }
+        for (Servo servo : moServos) {
+            servo.setPosition(servo.getPosition());
         }
     }
 
@@ -92,19 +113,52 @@ public class Objective {
     /**
      * Checks to see if each motor in the objective has reached its position or not
      * @author June
-     * @param mtTask Task to check
+     * @param moTask Task to check
      * @return boolean representing if the motor is busy
      */
-    private boolean isBusy(Task mtTask) {
-        for (int iMotor = 0; iMotor < miMotors.length; iMotor++) {
-            DcMotor mdMotor = miMotors[iMotor];
+    private boolean isBusy(Task moTask) {
+        for (int iMotor = 0; iMotor < moMotors.length; iMotor++) {
+            DcMotor moMotor = moMotors[iMotor];
             if(
-                    mdMotor.isBusy() &&
-                    mdMotor.getCurrentPosition() != mdMotor.getTargetPosition() &&
-                    mdMotor.getCurrentPosition() != mtTask.motorPosition(iMotor)
+                    moMotor.isBusy() &&
+                    moMotor.getCurrentPosition() != moMotor.getTargetPosition() &&
+                    moMotor.getCurrentPosition() != moTask.motorPosition(iMotor)
             ) return true;
 
         }
         return false;
+    }
+
+    /**
+     * Checks to see if the sequence of tasks is valid based off of the motors and servos in the objective
+     * @return boolean representing if the sequence is valid
+     */
+    private boolean sequenceIsValid() {
+        int miTaskLength = -1;
+        boolean mbIsValid = true;
+
+        for (Task moTask : moTasks) {
+            // Check if the Tasks array has the same motors and servos as the Objective object
+                if(moMotors.length + moServos.length != moTask.length()) return false;
+
+            // Check to make sure each Task in the Sequence has an array of Positions proportional to the amount of motors and servos
+                int miCurrentLength = moTask.motorPositions().length + moTask.servoPositions().length;
+
+                // If miTaskLength is -1, assume that this is the first task we have checked
+                if (miTaskLength == -1) {
+                    // Store the length of the current task to miTaskLength for future comparison
+                    miTaskLength = miCurrentLength;
+                    continue;
+                }
+
+
+                // If there is a mismatch, report false
+                if (miTaskLength != miCurrentLength) {
+                    mbIsValid = false;
+                    break;
+                }
+        }
+
+        return mbIsValid;
     }
 }

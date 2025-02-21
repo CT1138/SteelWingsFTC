@@ -13,86 +13,84 @@ import org.firstinspires.ftc.teamcode.clubFair.FairObjectives;
 import org.firstinspires.ftc.teamcode.core.Objective;
 import org.firstinspires.ftc.teamcode.util.Mecanum;
 
-import java.util.Objects;
-
 @TeleOp(name="Assisted Driver", group="Into-The-Deep")
 public class AssistedDriver extends OpMode
 {
     // define the motors and whatnot
-    Objective currentObjective = null;
-    Mecanum mecanum = new Mecanum();
-    private DcMotor[] miMotors;
-    private Servo[] miServos;
-    private FairObjectives fairObjectives;
-    private final ElapsedTime runtime = new ElapsedTime();
-    private final ElapsedTime objectiveRuntime = new ElapsedTime();
-    private DcMotor Drive_FrontLeft = null;
-    private DcMotor Drive_FrontRight = null;
-    private DcMotor Drive_RearLeft = null;
-    private DcMotor Drive_RearRight = null;
-    private DcMotor Arm_Extend = null;
-    private DcMotor Arm_PhaseTwo = null;
-    private DcMotor Arm_Twist = null;
-    private Servo ServoClaw = null;
-    private TouchSensor LiftarmStop = null;
+    Objective moCurrentObjective = null;
+    Mecanum moMecanum = new Mecanum(0.75);
+    private DcMotor[] moMotors;
+    private Servo[] moServos;
+    private FairObjectives moFairObjectives;
+    private final ElapsedTime moRuntime = new ElapsedTime();
+    private final ElapsedTime moObjectiveRuntime = new ElapsedTime();
+    private DcMotor moDrive_FrontLeft = null;
+    private DcMotor moDrive_FrontRight = null;
+    private DcMotor moDrive_RearLeft = null;
+    private DcMotor moDrive_RearRight = null;
+    private DcMotor moArm_Extend = null;
+    private DcMotor moArm_PhaseTwo = null;
+    private DcMotor moArm_Twist = null;
+    private Servo moServoClaw = null;
+    private TouchSensor moLiftarmZero = null;
 
     @Override
     public void init() {
         // Single execution on INIT
-        Drive_FrontLeft  = hardwareMap.get(DcMotor.class, "Drive_FrontLeft");
-        Drive_FrontRight = hardwareMap.get(DcMotor.class, "Drive_FrontRight");
-        Drive_RearLeft   = hardwareMap.get(DcMotor.class, "Drive_RearLeft");
-        Drive_RearRight  = hardwareMap.get(DcMotor.class, "Drive_RearRight");
+        moDrive_FrontLeft = hardwareMap.get(DcMotor.class, "Drive_FrontLeft");
+        moDrive_FrontRight = hardwareMap.get(DcMotor.class, "Drive_FrontRight");
+        moDrive_RearLeft = hardwareMap.get(DcMotor.class, "Drive_RearLeft");
+        moDrive_RearRight = hardwareMap.get(DcMotor.class, "Drive_RearRight");
 
-        Arm_Extend = hardwareMap.get(DcMotor.class, "Arm_Extend");
-        Arm_PhaseTwo = hardwareMap.get(DcMotor.class, "Arm_PhaseTwo");
-        Arm_Twist = hardwareMap.get(DcMotor.class, "Arm_Twist");
+        moArm_Extend = hardwareMap.get(DcMotor.class, "Arm_Extend");
+        moArm_PhaseTwo = hardwareMap.get(DcMotor.class, "Arm_PhaseTwo");
+        moArm_Twist = hardwareMap.get(DcMotor.class, "Arm_Twist");
 
-        ServoClaw = hardwareMap.get(Servo.class, "Servo_Claw");
-        LiftarmStop = hardwareMap.get(TouchSensor.class, "TouchSensor");
+        moServoClaw = hardwareMap.get(Servo.class, "Servo_Claw");
+        moLiftarmZero = hardwareMap.get(TouchSensor.class, "TouchSensor");
 
-        Drive_FrontLeft.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        Drive_FrontRight.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        Drive_RearLeft.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        Drive_RearRight.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        moDrive_FrontLeft.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        moDrive_FrontRight.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        moDrive_RearLeft.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        moDrive_RearRight.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
-        Arm_Extend.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        Arm_PhaseTwo.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        moArm_Extend.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        moArm_PhaseTwo.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
-        Arm_Extend.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        Arm_Extend.setDirection(DcMotorSimple.Direction.REVERSE);
+        moArm_Extend.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        moArm_Extend.setDirection(DcMotorSimple.Direction.REVERSE);
 
-        Drive_FrontLeft.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        Drive_FrontRight.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        Drive_RearRight.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        Drive_RearLeft.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        miMotors = new DcMotor[]{Arm_Extend, Arm_PhaseTwo, Arm_Twist};
-        miServos = new Servo[]{ServoClaw};
+        moDrive_FrontLeft.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        moDrive_FrontRight.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        moDrive_RearRight.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        moDrive_RearLeft.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        moMotors = new DcMotor[]{moArm_Extend, moArm_PhaseTwo, moArm_Twist};
+        moServos = new Servo[]{moServoClaw};
 
-        fairObjectives = new FairObjectives(miMotors, miServos);
+        moFairObjectives = new FairObjectives(moMotors, moServos);
     }
 
     @Override
     public void start() {
-        objectiveRuntime.reset();
-        runtime.reset();
-        ServoClaw.setPosition(1);
+        moObjectiveRuntime.reset();
+        moRuntime.reset();
+        moServoClaw.setPosition(1);
     }
 
     private boolean canMoveOn() {
-        for (DcMotor mdMotor : miMotors) if (mdMotor.isBusy() && mdMotor.getCurrentPosition() != mdMotor.getTargetPosition()) return false;
+        for (DcMotor moMotor : moMotors) if (moMotor.isBusy() && moMotor.getCurrentPosition() != moMotor.getTargetPosition()) return false;
         return true;
     }
 
     private void liftarmMaster() {
-            boolean mbFloor = LiftarmStop.isPressed();
+            boolean mbFloor = moLiftarmZero.isPressed();
             int miButtonPressDelay = 1;
 
         // Objective Declarations
-            Objective foZero = fairObjectives.foZero(1);
-            Objective foWave = fairObjectives.foWave(0.75);
-            Objective foGrabFromFloor = fairObjectives.foGrabFromFloor(1);
-            Objective foGrabFromLowerRung = fairObjectives.foGrabFromLowerRung(1);
+            Objective foZero = moFairObjectives.foZero(1);
+            Objective foWave = moFairObjectives.foWave(0.75);
+            Objective foGrabFromFloor = moFairObjectives.foGrabFromFloor(1);
+            Objective foGrabFromLowerRung = moFairObjectives.foGrabFromLowerRung(1);
 
         // ========================
         // BEGIN OBJECTIVE CONTROLS
@@ -101,46 +99,46 @@ public class AssistedDriver extends OpMode
         // STOP EVERYTHING
         // Control = Left Bumper + Right Bumper + Back
             if (gamepad2.left_bumper && gamepad2.right_bumper && gamepad2.back) {
-                if (currentObjective != null) currentObjective.stop();
+                if (moCurrentObjective != null) moCurrentObjective.stop();
 
-                Arm_Extend.setPower(0);
-                Arm_Twist.setPower(0);
-                Arm_PhaseTwo.setPower(0);
-                Arm_Extend.setTargetPosition(Arm_Extend.getCurrentPosition());
-                Arm_Twist.setTargetPosition(Arm_Twist.getCurrentPosition());
-                Arm_PhaseTwo.setTargetPosition(Arm_PhaseTwo.getCurrentPosition());
+                moArm_Extend.setPower(0);
+                moArm_Twist.setPower(0);
+                moArm_PhaseTwo.setPower(0);
+                moArm_Extend.setTargetPosition(moArm_Extend.getCurrentPosition());
+                moArm_Twist.setTargetPosition(moArm_Twist.getCurrentPosition());
+                moArm_PhaseTwo.setTargetPosition(moArm_PhaseTwo.getCurrentPosition());
             }
 
         // Wave at the viewer!
         // Control = A
-            if (canMoveOn() && gamepad2.a && runtime.seconds() > miButtonPressDelay) {
-                runtime.reset();
-                currentObjective = foWave;
-                foWave.run(objectiveRuntime, mbFloor);
+            if (canMoveOn() && gamepad2.a && moRuntime.seconds() > miButtonPressDelay) {
+                moRuntime.reset();
+                moCurrentObjective = foWave;
+                foWave.run(moObjectiveRuntime, mbFloor);
             }
 
         // Grab Sample From Lower Rung
         // Control = B + Dpad_Left
-            if (canMoveOn() && gamepad2.b && gamepad2.dpad_left && runtime.seconds() > miButtonPressDelay) {
-                runtime.reset();
-                currentObjective = foGrabFromLowerRung;
-                foGrabFromLowerRung.run(objectiveRuntime, mbFloor);
+            if (canMoveOn() && gamepad2.b && gamepad2.dpad_left && moRuntime.seconds() > miButtonPressDelay) {
+                moRuntime.reset();
+                moCurrentObjective = foGrabFromLowerRung;
+                foGrabFromLowerRung.run(moObjectiveRuntime, mbFloor);
             }
 
         // Grab Sample From Floor
         // Control = B + Dpad_Down
-            if (canMoveOn() && gamepad2.b && gamepad2.dpad_down && runtime.seconds() > miButtonPressDelay) {
-                runtime.reset();
-                currentObjective = foGrabFromFloor;
-                foGrabFromFloor.run(objectiveRuntime, mbFloor);
+            if (canMoveOn() && gamepad2.b && gamepad2.dpad_down && moRuntime.seconds() > miButtonPressDelay) {
+                moRuntime.reset();
+                moCurrentObjective = foGrabFromFloor;
+                foGrabFromFloor.run(moObjectiveRuntime, mbFloor);
             }
 
         // Return Motors to Zero
         // Control = Back
-            if (canMoveOn() && gamepad2.back && runtime.seconds() > miButtonPressDelay) {
-                runtime.reset();
-                currentObjective = foZero;
-                foZero.run(objectiveRuntime, mbFloor);
+            if (canMoveOn() && gamepad2.back && moRuntime.seconds() > miButtonPressDelay) {
+                moRuntime.reset();
+                moCurrentObjective = foZero;
+                foZero.run(moObjectiveRuntime, mbFloor);
             }
 
         // ======================
@@ -149,43 +147,43 @@ public class AssistedDriver extends OpMode
     }
 
     private void drivetrainMaster() {
-        double drive = gamepad1.left_stick_y;
-        double strafe = -gamepad1.left_stick_x;
-        double twist = gamepad1.right_stick_x;
+        double mdDrive = gamepad1.left_stick_y;
+        double mdStrafe = -gamepad1.left_stick_x;
+        double mdTwist = gamepad1.right_stick_x;
 
-        boolean slow = gamepad1.right_bumper;
-        boolean slower = gamepad1.left_bumper;
+        boolean mbSlow = gamepad1.right_bumper;
+        boolean mbSlower = gamepad1.left_bumper;
 
-        double modifier = gamepad1.right_trigger;
+        double mdBrake = gamepad1.right_trigger;
 
-        if (gamepad1.dpad_left) strafe = 1 - modifier;
-        if (gamepad1.dpad_right) strafe = -1 + modifier;
-        if (gamepad1.dpad_up) drive = -1 + modifier;
-        if (gamepad1.dpad_down) drive = 1 - modifier;
+        if (gamepad1.dpad_left) mdStrafe = 1 - mdBrake;
+        if (gamepad1.dpad_right) mdStrafe = -1 + mdBrake;
+        if (gamepad1.dpad_up) mdDrive = -1 + mdBrake;
+        if (gamepad1.dpad_down) mdDrive = 1 - mdBrake;
 
-        if (gamepad1.x) twist = -1 + modifier;
-        if (gamepad1.b) twist = 1 - modifier;
+        if (gamepad1.x) mdTwist = -1 + mdBrake;
+        if (gamepad1.b) mdTwist = 1 - mdBrake;
 
         double mdSlowerPowerModifier = 0.5;
-        if (slower) {
-            drive = drive * mdSlowerPowerModifier;
-            strafe = strafe * mdSlowerPowerModifier;
-            twist = strafe * mdSlowerPowerModifier;
+        if (mbSlower) {
+            mdDrive = mdDrive * mdSlowerPowerModifier;
+            mdStrafe = mdStrafe * mdSlowerPowerModifier;
+            mdTwist = mdStrafe * mdSlowerPowerModifier;
         }
 
         double mdSlowPowerModifier = 0.75;
-        if (!slow) {
-            drive = drive * mdSlowPowerModifier;
-            strafe = strafe * mdSlowPowerModifier;
-            twist = twist * mdSlowPowerModifier;
+        if (!mbSlow) {
+            mdDrive = mdDrive * mdSlowPowerModifier;
+            mdStrafe = mdStrafe * mdSlowPowerModifier;
+            mdTwist = mdTwist * mdSlowPowerModifier;
         }
 
-        double[] wheelpower = mecanum.calculate(drive, strafe, -twist, gamepad2.right_bumper);
+        double[] wheelpower = moMecanum.Calculate(mdDrive, mdStrafe, -mdTwist, gamepad2.right_bumper);
 
-        Drive_FrontLeft.setPower(wheelpower[0]);
-        Drive_FrontRight.setPower(wheelpower[1]);
-        Drive_RearLeft.setPower(wheelpower[2]);
-        Drive_RearRight.setPower(wheelpower[3]);
+        moDrive_FrontLeft.setPower(wheelpower[0]);
+        moDrive_FrontRight.setPower(wheelpower[1]);
+        moDrive_RearLeft.setPower(wheelpower[2]);
+        moDrive_RearRight.setPower(wheelpower[3]);
     }
 
     @Override
@@ -196,27 +194,27 @@ public class AssistedDriver extends OpMode
         telemetry.addLine("===================================");
         telemetry.addLine("Arm Positions");
         telemetry.addLine("===================================");
-        telemetry.addData("Arm Extend Position", Arm_Extend.getCurrentPosition());
-        telemetry.addData("Arm Extend Target Position", Arm_Extend.getTargetPosition());
-        telemetry.addData("Arm Elbow Position", Arm_PhaseTwo.getCurrentPosition());
-        telemetry.addData("Arm Elbow Target Position", Arm_PhaseTwo.getTargetPosition());
-        telemetry.addData("Arm Twist Position", Arm_Twist.getCurrentPosition());
-        telemetry.addData("Arm Twist Target Position", Arm_Twist.getTargetPosition());
-        telemetry.addData("Arm Claw Position", ServoClaw.getPosition());
+        telemetry.addData("Arm Extend Position", moArm_Extend.getCurrentPosition());
+        telemetry.addData("Arm Extend Target Position", moArm_Extend.getTargetPosition());
+        telemetry.addData("Arm Elbow Position", moArm_PhaseTwo.getCurrentPosition());
+        telemetry.addData("Arm Elbow Target Position", moArm_PhaseTwo.getTargetPosition());
+        telemetry.addData("Arm Twist Position", moArm_Twist.getCurrentPosition());
+        telemetry.addData("Arm Twist Target Position", moArm_Twist.getTargetPosition());
+        telemetry.addData("Arm Claw Position", moServoClaw.getPosition());
         telemetry.addLine("===================================");
         telemetry.addLine("");
         telemetry.addLine("===================================");
         telemetry.addLine("DriveTrain");
         telemetry.addLine("===================================");
-        telemetry.addData("Front Left Power", Drive_FrontLeft.getPower());
-        telemetry.addData("Front Right Power", Drive_FrontRight.getPower());
-        telemetry.addData("Rear Left Power", Drive_RearLeft.getPower());
-        telemetry.addData("Rear Right Power", Drive_RearRight.getPower());
+        telemetry.addData("Front Left Power", moDrive_FrontLeft.getPower());
+        telemetry.addData("Front Right Power", moDrive_FrontRight.getPower());
+        telemetry.addData("Rear Left Power", moDrive_RearLeft.getPower());
+        telemetry.addData("Rear Right Power", moDrive_RearRight.getPower());
         telemetry.addLine("");
-        telemetry.addData("Front Left Position", Drive_FrontLeft.getCurrentPosition());
-        telemetry.addData("Front Right Position", Drive_FrontRight.getCurrentPosition());
-        telemetry.addData("Rear Left Position", Drive_RearLeft.getCurrentPosition());
-        telemetry.addData("Rear Right Position", Drive_RearRight.getCurrentPosition());
+        telemetry.addData("Front Left Position", moDrive_FrontLeft.getCurrentPosition());
+        telemetry.addData("Front Right Position", moDrive_FrontRight.getCurrentPosition());
+        telemetry.addData("Rear Left Position", moDrive_RearLeft.getCurrentPosition());
+        telemetry.addData("Rear Right Position", moDrive_RearRight.getCurrentPosition());
         telemetry.addLine("===================================");
 
         telemetry.update();
