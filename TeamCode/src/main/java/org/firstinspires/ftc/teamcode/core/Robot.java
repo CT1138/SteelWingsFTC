@@ -4,14 +4,15 @@ import static org.firstinspires.ftc.robotcore.external.BlocksOpModeCompanion.har
 
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Servo;
-import com.sun.tools.javac.util.List;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Objects;
 
 public class Robot {
-    private DcMotor[] moMotors;
-    private Servo[] moServos;
+    private final DcMotor[] moMotors;
+    private final String[] msMotors;
+    private final Servo[] moServos;
+    private final String[] msServos;
 
     /**
      * Constructor for Robot
@@ -19,14 +20,17 @@ public class Robot {
      * @param asServos array of servos
      */
     public Robot(String[] asMotors, String[] asServos) {
-        ArrayList<Object> loMotors = new ArrayList<>();
-        ArrayList<Object> loServos = new ArrayList<>();
+        msMotors = asMotors;
+        msServos = asServos;
+
+        ArrayList<DcMotor> loMotors = new ArrayList<>();
+        ArrayList<Servo> loServos = new ArrayList<>();
 
         for (String msMotor : asMotors) {
-            loMotors.add(getMotorFromString("msMotor"));
+            loMotors.add(hardwareMotor(msMotor));
         }
         for (String msServo : asServos) {
-            loServos.add(getServoFromString("msServos"));
+            loServos.add(hardwareServo(msServo));
         }
 
         moMotors = loMotors.toArray(new DcMotor[asMotors.length]);
@@ -34,24 +38,44 @@ public class Robot {
     }
 
     // MOTORS
-    private DcMotor getMotorFromString(String asName) {
+    private DcMotor hardwareMotor(String asName) {
         return hardwareMap.get(DcMotor.class, asName);
     }
-    private DcMotor getMotorFromArray(int aiIndex) {
+    public DcMotor motor(int aiIndex) {
         return moMotors[aiIndex];
     }
-    private DcMotor[] getMotorArray() {
+    public DcMotor motor(String asName) {
+        int miIndex = -1;
+        for (int i = 0; i < msMotors.length; i++) {
+            if(!Objects.equals(msMotors[i], asName)) continue;
+            miIndex = i;
+            break;
+        }
+        if(miIndex == -1) return null;
+        return moMotors[miIndex];
+    }
+    public DcMotor[] getMotorArray() {
         return moMotors;
     }
 
     // SERVOS
-    private Servo getServoFromString(String asName) {
+    private Servo hardwareServo(String asName) {
         return hardwareMap.get(Servo.class, asName);
     }
-    private Servo getServoFromArray(int aiIndex) {
+    public Servo servo(int aiIndex) {
         return moServos[aiIndex];
     }
-    private Servo[] getServoArray() {
+    public Servo servo(String asName) {
+        int miIndex = -1;
+        for (int i = 0; i < msServos.length; i++) {
+            if(!Objects.equals(msServos[i], asName)) continue;
+            miIndex = i;
+            break;
+        }
+        if(miIndex == -1) return null;
+        return moServos[miIndex];
+    }
+    public Servo[] getServoArray() {
         return moServos;
     }
 }
