@@ -1,8 +1,7 @@
 package org.firstinspires.ftc.teamcode.core;
 
-import static org.firstinspires.ftc.robotcore.external.BlocksOpModeCompanion.hardwareMap;
-
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
 
 import java.util.ArrayList;
@@ -13,13 +12,16 @@ public class Robot {
     private final String[] msMotors;
     private final Servo[] moServos;
     private final String[] msServos;
+    private final HardwareMap msHardwareMap;
 
     /**
      * Constructor for Robot
      * @param asMotors array of motors
      * @param asServos array of servos
      */
-    public Robot(String[] asMotors, String[] asServos) {
+    public Robot(HardwareMap asHardwareMap, String[] asMotors, String[] asServos) {
+        msHardwareMap = asHardwareMap;
+
         msMotors = asMotors;
         msServos = asServos;
 
@@ -27,9 +29,11 @@ public class Robot {
         ArrayList<Servo> loServos = new ArrayList<>();
 
         for (String msMotor : asMotors) {
+            if(msMotor == null) continue;
             loMotors.add(hardwareMotor(msMotor));
         }
         for (String msServo : asServos) {
+            if(msServo == null) continue;
             loServos.add(hardwareServo(msServo));
         }
 
@@ -39,7 +43,8 @@ public class Robot {
 
     // MOTORS
     private DcMotor hardwareMotor(String asName) {
-        return hardwareMap.get(DcMotor.class, asName);
+        if(asName == null) return null;
+        return msHardwareMap.get(DcMotor.class, asName);
     }
     public DcMotor motor(int aiIndex) {
         return moMotors[aiIndex];
@@ -60,7 +65,8 @@ public class Robot {
 
     // SERVOS
     private Servo hardwareServo(String asName) {
-        return hardwareMap.get(Servo.class, asName);
+        if(asName == null) return null;
+        return msHardwareMap.get(Servo.class, asName);
     }
     public Servo servo(int aiIndex) {
         return moServos[aiIndex];

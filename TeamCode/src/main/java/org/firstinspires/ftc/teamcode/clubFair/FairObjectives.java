@@ -32,7 +32,7 @@ public class FairObjectives {
         // Build Tasks Array
         Task[] moTasks = {
          // new Task(name,                  servoPositions,     motorPositions,            motorPowers,     waitFor)
-            new Task("Raise Arm",   new double[]{1.0},  new int[]{200, -1, -1},    adArmPower, 4),
+            new Task("Raise Arm",   new double[]{1.0},  new int[]{100, -1, -1},    adArmPower, 4),
 
             new Task("Wave Up",     new double[]{0},    new int[]{-1, 430, 100},     adArmPower * 0.5, 0),
             new Task("Wave down",     new double[]{1.0},  new int[]{-1, 560, -100},    adArmPower * 0.5, 0),
@@ -78,7 +78,7 @@ public class FairObjectives {
         // Build Tasks Array
         Task[] moTasks = {
          // new Task(name,                  servoPositions,      motorPositions,        motorPower       waitFor)
-            new Task("Raise Arm",   new double[]{-1.0},  new int[]{0, 0, 0},    aoArmPower,   0),
+            new Task("Zero Arm",   new double[]{-1.0},  new int[]{0, 0, 0},    aoArmPower,   0),
         };
         return new Objective(moMotors, moServos, moTasks);
     }

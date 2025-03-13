@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.IntoTheDeep.TeleOP; // package org.firstinspires.ftc.robotcontroller.external.samples;
 
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.TouchSensor;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
@@ -12,6 +13,7 @@ import org.firstinspires.ftc.teamcode.util.Mecanum;
 import java.io.IOException;
 
 @TeleOp(name="Manual Driver", group="Into-The-Deep")
+@Disabled
 public class ManualDriver extends OpMode
 {
     // define the motors and whatnot

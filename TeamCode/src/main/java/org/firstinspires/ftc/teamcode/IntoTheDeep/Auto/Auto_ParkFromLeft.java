@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.IntoTheDeep.Auto;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.IMU;
@@ -8,7 +9,7 @@ import com.qualcomm.robotcore.hardware.IMU;
 import org.firstinspires.ftc.teamcode.core.SelfDriver;
 
 @Autonomous(name="Park from Left", group="Robot")
-
+@Disabled
 public class Auto_ParkFromLeft extends LinearOpMode {
 
     /* Declare OpMode members. */
