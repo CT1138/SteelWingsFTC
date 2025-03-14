@@ -3,14 +3,17 @@ package org.firstinspires.ftc.teamcode.ClubFair25.TeleOP;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.TouchSensor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.ClubFair25.FairObjectives;
 import org.firstinspires.ftc.teamcode.core.Objective;
+import org.firstinspires.ftc.teamcode.core.Task;
+import org.firstinspires.ftc.teamcode.core.util.CSVManager;
 
-@TeleOp(name="Club Fair Manual", group="Into-The-Deep")
+@TeleOp(name="Club Fair Demo", group="Into-The-Deep")
 public class ClubFairDemo extends OpMode
 {
     // ===============
@@ -26,6 +29,7 @@ public class ClubFairDemo extends OpMode
     private final ElapsedTime Runtime = new ElapsedTime();
     private final ElapsedTime ObjectiveRuntime = new ElapsedTime();
     // Objectives
+    private CSVManager csv = new CSVManager();
     private Objective moCurrentObjective;
     private FairObjectives moFairObjectives;
 
@@ -53,6 +57,7 @@ public class ClubFairDemo extends OpMode
         Claw = hardwareMap.get(Servo.class, "Claw");
 
         // Set Direction for Lift different than the rest
+        Lift.setDirection(DcMotor.Direction.FORWARD);
         Elbow.setDirection(DcMotor.Direction.REVERSE);
         Wrist.setDirection(DcMotor.Direction.REVERSE);
 
@@ -71,13 +76,14 @@ public class ClubFairDemo extends OpMode
     }
     private boolean canMoveOn() {
         for (DcMotor motor : Motors) if (motor.isBusy() && motor.getCurrentPosition() != motor.getTargetPosition()) return false;
-        return true;
+        return (Runtime.seconds() > 1);
     }
     private void liftarm() {
         boolean mbFloor = Touch.isPressed();
-        int miButtonPressDelay = 1;
 
         // Objective Declarations
+        Objective foHappi = moFairObjectives.foHappi(1);
+        Objective foHang = moFairObjectives.foHang(1);
         Objective foZero = moFairObjectives.foZero(1);
         Objective foWave = moFairObjectives.foWave(0.75);
         Objective foGrabFromFloor = moFairObjectives.foGrabFromFloor(1);
@@ -98,36 +104,58 @@ public class ClubFairDemo extends OpMode
             }
         }
 
+        // Happi Happi
+        // Control = X
+        if (canMoveOn() && gamepad2.x) {
+            Runtime.reset();
+            Task[] csvTasks = csv.toTasks("/storage/emulated/0/Download/Objective_Happi.csv", true);
+            Objective csvObjective = new Objective(Motors, Servos, csvTasks);
+            csvObjective.run(ObjectiveRuntime, mbFloor);
+        }
+
         // Wave at the viewer!
         // Control = A
-        if (canMoveOn() && gamepad2.a && Runtime.seconds() > miButtonPressDelay) {
+        if (canMoveOn() && gamepad2.a) {
             Runtime.reset();
-            moCurrentObjective = foWave;
-            foWave.run(ObjectiveRuntime, mbFloor);
+            Task[] csvTasks = csv.toTasks("/storage/emulated/0/Download/Objective_Wave.csv", true);
+            Objective csvObjective = new Objective(Motors, Servos, csvTasks);
+            csvObjective.run(ObjectiveRuntime, mbFloor);
         }
 
         // Grab Sample From Lower Rung
         // Control = B + Dpad_Left
-        if (canMoveOn() && gamepad2.b && gamepad2.dpad_left && Runtime.seconds() > miButtonPressDelay) {
+        if (canMoveOn() && gamepad2.b && gamepad2.dpad_left) {
             Runtime.reset();
-            moCurrentObjective = foGrabFromLowerRung;
-            foGrabFromLowerRung.run(ObjectiveRuntime, mbFloor);
+            Task[] csvTasks = csv.toTasks("/storage/emulated/0/Download/Objective_GrabSampleFromLowerRung.csv", true);
+            Objective csvObjective = new Objective(Motors, Servos, csvTasks);
+            csvObjective.run(ObjectiveRuntime, mbFloor);
         }
 
         // Grab Sample From Floor
         // Control = B + Dpad_Down
-        if (canMoveOn() && gamepad2.b && gamepad2.dpad_down && Runtime.seconds() > miButtonPressDelay) {
+        if (canMoveOn() && gamepad2.b && gamepad2.dpad_down) {
             Runtime.reset();
-            moCurrentObjective = foGrabFromFloor;
-            foGrabFromFloor.run(ObjectiveRuntime, mbFloor);
+            Task[] csvTasks = csv.toTasks("/storage/emulated/0/Download/Objective_GrabSampleFromFloor.csv", true);
+            Objective csvObjective = new Objective(Motors, Servos, csvTasks);
+            csvObjective.run(ObjectiveRuntime, mbFloor);
+        }
+
+        // 2nd level hang
+        // Control = B + Dpad_Up
+        if (canMoveOn() && gamepad2.b && gamepad2.dpad_up) {
+            Runtime.reset();
+            Task[] csvTasks = csv.toTasks("/storage/emulated/0/Download/Objective_LevelTwoHang.csv", true);
+            Objective csvObjective = new Objective(Motors, Servos, csvTasks);
+            csvObjective.run(ObjectiveRuntime, mbFloor);
         }
 
         // Return Motors to Zero
-        // Control = Back
-        if (canMoveOn() && gamepad2.back && Runtime.seconds() > miButtonPressDelay) {
-            Runtime.reset();
-            moCurrentObjective = foZero;
-            foZero.run(ObjectiveRuntime, mbFloor);
+        // Control = Back or Y
+        if (canMoveOn() && (gamepad2.back || gamepad2.y)) {
+            for(DcMotor motor : Motors) {
+                motor.setTargetPosition(0);
+                motor.setPower(1);
+            }
         }
 
         // ======================
@@ -145,6 +173,13 @@ public class ClubFairDemo extends OpMode
         liftarm();
 
         telemetry.update();
+    }
+
+    public void stop() {
+        for (DcMotor motor : Motors) {
+            motor.setPower(0);
+            motor.setTargetPosition(0);
+        }
     }
 
     // ===============

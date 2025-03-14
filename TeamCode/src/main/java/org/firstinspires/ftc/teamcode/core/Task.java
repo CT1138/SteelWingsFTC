@@ -47,19 +47,20 @@ public class Task {
     public void run(DcMotor[] aoMotors, Servo[] aoServos, boolean abFloor) {
         // Set Value per motor
         for (int miMotorIndex = 0; miMotorIndex < aoMotors.length; miMotorIndex++) {
-            if (this.motorPosition(miMotorIndex) == -1) continue; // Skip if -1 (indicates a skip)
+            double mdPosition = this.motorPosition(miMotorIndex);
+            double mdPower = this.motorPower(miMotorIndex);
+
+            if (mdPosition == -1) continue; // Skip if -1 (indicates a skip)
             DcMotor mdMotor = aoMotors[miMotorIndex];
 
             // If the current motor is "Arm_Extend", check to make sure the arm will not under-extend when this task is performed
-            if (abFloor && Objects.equals(mdMotor.getDeviceName(), "Arm_Extend") && this.motorPosition(miMotorIndex) < 0)
+            if (abFloor && Objects.equals(mdMotor.getDeviceName(), "Arm_Extend") && mdPosition < 0)
                 continue;
 
             // Assign Power and Position
-            double mdPower = this.motorPower(miMotorIndex);
-            mdMotor.setPower(mdPower);
-            double mdPosition = this.motorPosition(miMotorIndex);
-            mdMotor.setTargetPosition((int) mdPosition);
 
+            mdMotor.setPower(mdPower);
+            mdMotor.setTargetPosition((int) mdPosition);
             // Make sure it is in RUN_TO_POSITION mode
             mdMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         }

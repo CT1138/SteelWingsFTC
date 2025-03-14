@@ -11,25 +11,31 @@ import java.util.List;
 public class CSVManager {
 
     // Method to read CSV and convert to Task objects
-    public Task[] toTasks(String filePath) {
-        List<Task> taskList = new ArrayList<>(); // To store Task objects
+    public Task[] toTasks(String filePath, boolean hasHeader) {
+        List<Task> taskList = new ArrayList<>();
         BufferedReader br = null;
         String line = "";
-        String csvSplitBy = ","; // Define the delimiter
 
         try {
             br = new BufferedReader(new FileReader(filePath));
+
             while ((line = br.readLine()) != null) {
-                // Split the row into individual values
-                String[] row = line.split(csvSplitBy);
+                // Skip header row if present
+                if (hasHeader) {
+                    hasHeader = false;
+                    continue;
+                }
 
-                // Parse the values from the row
-                double[] adServoPositions = parseDoubleArray(row[0]);
-                double[] aiMotorPositions = parseDoubleArray(row[1]);
-                double adMotorPower = Double.parseDouble(row[2]);
-                int aiWaitFor = Integer.parseInt(row[3]);
+                // Split by commas (assuming CSV format), but parse sub-arrays separately
+                String[] row = line.split(",");
 
-                // Create a new Task object and add it to the list
+                // Parse the values from the row (handling space-separated arrays)
+                double[] adServoPositions = parseDoubleArray(row[0].trim()); // First column
+                double[] aiMotorPositions = parseDoubleArray(row[1].trim()); // Second column
+                double adMotorPower = Double.parseDouble(row[2].trim()); // Third column
+                int aiWaitFor = Integer.parseInt(row[3].trim()); // Fourth column
+
+                // Create and add a new Task object
                 taskList.add(new Task(adServoPositions, aiMotorPositions, adMotorPower, aiWaitFor));
             }
         } catch (IOException e) {
@@ -37,14 +43,13 @@ public class CSVManager {
         } finally {
             try {
                 if (br != null) {
-                    br.close(); // Close the BufferedReader after use
+                    br.close();
                 }
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
 
-        // Convert the List to an array and return it
         return taskList.toArray(new Task[0]);
     }
 

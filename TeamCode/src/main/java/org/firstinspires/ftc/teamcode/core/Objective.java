@@ -48,7 +48,7 @@ public class Objective {
                     continue;
 
                 // Assign Power and Position
-                double mdPower = moTask.motorPower(miMotorIndex);
+                double mdPower = moTask.motorPower(0);
                 mdMotor.setPower(mdPower);
                 double mdPosition = moTask.motorPosition(miMotorIndex);
                 mdMotor.setTargetPosition((int) mdPosition);
