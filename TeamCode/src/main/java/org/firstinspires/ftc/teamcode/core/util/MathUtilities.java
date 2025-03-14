@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.util;
+package org.firstinspires.ftc.teamcode.core.util;
 
 /**
  * This Class can store various math operations you may find yourself using often or in multiple classes.

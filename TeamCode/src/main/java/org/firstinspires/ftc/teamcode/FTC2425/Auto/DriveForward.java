@@ -27,7 +27,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package org.firstinspires.ftc.teamcode.IntoTheDeep.Auto;
+package org.firstinspires.ftc.teamcode.FTC2425.Auto;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
@@ -36,8 +36,8 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
-import org.firstinspires.ftc.teamcode.util.ConfigManager;
-import org.firstinspires.ftc.teamcode.util.Mecanum;
+import org.firstinspires.ftc.teamcode.core.util.ConfigManager;
+import org.firstinspires.ftc.teamcode.core.util.Mecanum;
 
 import java.io.IOException;
 

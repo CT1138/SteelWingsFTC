@@ -7,6 +7,7 @@ import com.qualcomm.robotcore.hardware.Servo;
 import java.util.ArrayList;
 import java.util.Objects;
 
+@Deprecated
 public class Robot {
     private final DcMotor[] moMotors;
     private final String[] msMotors;

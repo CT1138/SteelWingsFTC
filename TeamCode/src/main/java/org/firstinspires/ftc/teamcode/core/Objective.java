@@ -37,9 +37,6 @@ public class Objective {
         for (Task moTask : moTasks) {
             if(!mbCanRun) break;
             // Task
-            // Telemetry
-            System.out.println("Running task " + moTask.name());
-
             // Set Value per motor
             for (int miMotorIndex = 0; miMotorIndex < moMotors.length; miMotorIndex++) {
                 if(!mbCanRun) break;
@@ -51,7 +48,7 @@ public class Objective {
                     continue;
 
                 // Assign Power and Position
-                double mdPower = moTask.motorPower();
+                double mdPower = moTask.motorPower(miMotorIndex);
                 mdMotor.setPower(mdPower);
                 double mdPosition = moTask.motorPosition(miMotorIndex);
                 mdMotor.setTargetPosition((int) mdPosition);
@@ -78,7 +75,7 @@ public class Objective {
 
             aoRuntime.reset();
 
-            double mdWaitTime = moTask.waitFor() * moTask.motorPower();
+            double mdWaitTime = moTask.waitFor() * moTask.motorPower(0);
             while (aoRuntime.seconds() < mdWaitTime) {
                 if(!mbCanRun) break;
                 Thread.yield();

@@ -7,18 +7,35 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 import java.util.Objects;
 
 public class Task {
-    private final String mfNname;
     private final double[] mdServoPositions;
-    private final int[] mdMotorPositions;
-    private final double mdMotorPower;
+    private final double[] mdMotorPositions;
+    private final double[] mdMotorPowers;
     private final int miWaitFor;
 
-    public Task(String asName, double[] adServoPositions, int[] aiMotorPositions, double adMotorPower, int aiWaitFor) {
-        mfNname = asName;
-        mdServoPositions = adServoPositions;
-        mdMotorPositions = aiMotorPositions;
-        mdMotorPower = adMotorPower;
+    /**
+     * Constructor for a single task.
+     * @param adPositions 2D Array of servo and motor positions. First row is for servos, second row is for motors, third row is for motor POWERS
+     * @param aiWaitFor Time in seconds to wait after proceeding to the next task
+     */
+    public Task(double[][] adPositions, int aiWaitFor) {
+        mdServoPositions = adPositions[0];
+        mdMotorPositions = adPositions[1];
+        mdMotorPowers = adPositions[2];
         miWaitFor = aiWaitFor;
+    }
+
+    /**
+     * Constructor for a single task.
+     * @param adServoPositions Array of servo positions
+     * @param aiMotorPositions Array of Motor Positions
+     * @param adMotorPower Power to apply to motors
+     * @param aiWaitFor
+     */
+    public Task(double[] adServoPositions, double[] aiMotorPositions, double adMotorPower, int aiWaitFor) {
+        this.mdServoPositions = adServoPositions;
+        this.mdMotorPositions = aiMotorPositions;
+        this.mdMotorPowers = new double[] {adMotorPower};
+        this.miWaitFor = aiWaitFor;
     }
 
     /**
@@ -38,7 +55,7 @@ public class Task {
                 continue;
 
             // Assign Power and Position
-            double mdPower = this.motorPower();
+            double mdPower = this.motorPower(miMotorIndex);
             mdMotor.setPower(mdPower);
             double mdPosition = this.motorPosition(miMotorIndex);
             mdMotor.setTargetPosition((int) mdPosition);
@@ -59,16 +76,13 @@ public class Task {
         ElapsedTime moRuntime = new ElapsedTime();
         moRuntime.reset();
 
-        double mdWaitTime = this.waitFor() * this.motorPower();
+        double mdWaitTime = this.waitFor() * this.motorPower(0);
         while (moRuntime.seconds() < mdWaitTime) {
             Thread.yield();
         }
     }
 
     // Get name
-    public String name() {
-        return mfNname;
-    }
 
     // Get Servo Positions
     public final double[] servoPositions() {
@@ -79,16 +93,19 @@ public class Task {
     }
 
     // Get Motor Positions
-    public final int[] motorPositions() {
+    public final double[] motorPositions() {
         return mdMotorPositions;
     }
-    public final int motorPosition(int aiIndex) {
+    public final double motorPosition(int aiIndex) {
         return mdMotorPositions[aiIndex];
     }
 
     // Get Motor Power
-    public final double motorPower() {
-        return mdMotorPower;
+    public final double[] motorPowers() {
+        return mdMotorPowers;
+    }
+    public final double motorPower(int aiIndex) {
+        return mdMotorPowers[aiIndex];
     }
 
     // Get Delay Time

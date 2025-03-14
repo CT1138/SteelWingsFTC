@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.util;
+package org.firstinspires.ftc.teamcode.core.util;
 
 import com.qualcomm.robotcore.hardware.DcMotor;
 

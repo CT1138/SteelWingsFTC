@@ -1,5 +1,6 @@
-package org.firstinspires.ftc.teamcode.clubFair.TeleOP;
+package org.firstinspires.ftc.teamcode.FTC2425.TeleOP;
 
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -8,21 +9,30 @@ import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.TouchSensor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
-import org.firstinspires.ftc.teamcode.clubFair.FairObjectives;
-import org.firstinspires.ftc.teamcode.core.Objective;
+import org.firstinspires.ftc.teamcode.ClubFair25.FairObjectives;
 
-@TeleOp(name="Club Fair Demo", group="Into-The-Deep")
-public class ClubFairDemo extends OpMode
+import org.firstinspires.ftc.teamcode.core.Objective;
+import org.firstinspires.ftc.teamcode.core.Robot;
+import org.firstinspires.ftc.teamcode.core.util.Mecanum;
+import org.firstinspires.ftc.teamcode.core.util.MotorUtilities;
+
+@TeleOp(name="Assisted Driver", group="Into-The-Deep")
+@Disabled
+public class AssistedDriver extends OpMode
 {
     // ===============
     // BEGIN VARIABLES
     // ===============
         // Robot Hardware Setup
-            private DcMotor Lift;
-            private DcMotor Elbow;
-            private DcMotor Wrist;
-            private Servo Claw;
-            private TouchSensor Touch = null;
+            private final Robot myRobot = new Robot(
+                    hardwareMap,
+                    new String[]{ "Drive_FrontLeft", "Drive_FrontRight", "Drive_RearLeft", "Drive_RearRight", "Arm_Extend", "Arm_PhaseTwo", "Arm_Twist"},
+                    new String[]{ "Servo_Claw" }
+            );
+        // Parameters
+            private final double mdDefaultSpeed = 0.75;
+            private final double mdSlowSpeed = 0.75;
+            private final double mdSlowerSpeed = 0.5;
         // Runtimes
             private final ElapsedTime Runtime = new ElapsedTime();
             private final ElapsedTime ObjectiveRuntime = new ElapsedTime();
@@ -30,10 +40,15 @@ public class ClubFairDemo extends OpMode
             private Objective moCurrentObjective = null;
             private FairObjectives moFairObjectives;
         // Utilities
-
-        // Robot Hardware Data
+            private final Mecanum UtilMecanum = new Mecanum(mdDefaultSpeed);
+            MotorUtilities UtilMotors = new MotorUtilities(myRobot);
+        // Robot Hardware
             private DcMotor[] Motors;
+            private String[] msDriveMotors;
+            private String[] msArmMotors;
             private Servo[] Servos;
+            private Servo Claw = null;
+            private TouchSensor Touch = null;
     // ===============
     // END VARIABLES
     // ===============
@@ -48,18 +63,18 @@ public class ClubFairDemo extends OpMode
             // Define Robot
             Touch = hardwareMap.get(TouchSensor.class, "TouchSensor");
 
-            Lift = hardwareMap.get(DcMotor.class, "Lift");
-            Elbow = hardwareMap.get(DcMotor.class, "Elbow");
-            Wrist = hardwareMap.get(DcMotor.class, "Wrist");
+            msDriveMotors = new String[]{ "Drive_FrontLeft", "Drive_FrontRight", "Drive_RearLeft", "Drive_RearRight" };
+            UtilMotors.batchSetup(msDriveMotors, "forward", "run using encoder", "brake");
 
-            Claw = hardwareMap.get(Servo.class, "Claw");
+            msArmMotors = new String[]{ "Arm_Extend", "Arm_PhaseTwo", "Arm_Twist" };
+            UtilMotors.batchSetup(msArmMotors, "", "run using encoder", "brake");
 
-            // Set Direction for Lift different than the rest
-            Lift.setDirection(DcMotorSimple.Direction.REVERSE);
+            // Set Direction for Arm_Extend different than the rest
+            myRobot.motor("Arm_Extend").setDirection(DcMotorSimple.Direction.REVERSE);
 
             // Build motor array
-            Motors = new DcMotor[]{ Lift, Elbow, Wrist };
-            Servos = new Servo[]{ Claw };
+            Motors = myRobot.getMotorArray();
+            Servos = myRobot.getServoArray();
 
             // Get objectives
             moFairObjectives = new FairObjectives(Motors, Servos);
@@ -93,10 +108,7 @@ public class ClubFairDemo extends OpMode
                 if (gamepad2.left_bumper && gamepad2.right_bumper && gamepad2.back) {
                     if (moCurrentObjective != null) moCurrentObjective.stop();
 
-                    for (DcMotor motor : Motors) {
-                        motor.setPower(0);
-                        motor.setTargetPosition(motor.getCurrentPosition());
-                    }
+                    UtilMotors.freeze(msArmMotors);
                 }
 
             // Wave at the viewer!
@@ -135,14 +147,64 @@ public class ClubFairDemo extends OpMode
             // END OBJECTIVE CONTROLS
             // ======================
         }
+        private void drivetrainMaster() {
+            // Drive Controls
+                double mdDrive = gamepad1.left_stick_y;
+                double mdStrafe = -gamepad1.left_stick_x;
+                double mdTwist = gamepad1.right_stick_x;
 
+            // Modifier Controls
+                boolean mbSlow = gamepad1.right_bumper;
+                boolean mbSlower = gamepad1.left_bumper;
+                double mdBrake = gamepad1.right_trigger;
+
+            // Simple Controls:
+                // DPAD Controls to move robot in one direction
+                    if (gamepad1.dpad_left)
+                        mdStrafe = 1 - mdBrake;
+                    if (gamepad1.dpad_right)
+                        mdStrafe = -1 + mdBrake;
+                    if (gamepad1.dpad_up)
+                        mdDrive = -1 + mdBrake;
+                    if (gamepad1.dpad_down)
+                        mdDrive = 1 - mdBrake;
+
+                // X and B controls to turn robot
+                    if (gamepad1.x) mdTwist = -1 + mdBrake;
+                    if (gamepad1.b) mdTwist = 1 - mdBrake;
+
+            // Modifiers
+                // Slow/Slower
+                    if (mbSlower) {
+                        mdDrive *= mdSlowerSpeed;
+                        mdStrafe *= mdSlowerSpeed;
+                        mdTwist *= mdSlowerSpeed;
+                    }
+                    if (mbSlow) {
+                        mdDrive *= mdSlowSpeed;
+                        mdStrafe *= mdSlowSpeed;
+                        mdTwist *= mdSlowSpeed;
+                    }
+
+                // Brakes
+                    mdDrive -= mdBrake;
+                    mdStrafe -= mdBrake;
+                    mdTwist -= mdBrake;
+
+            // Calculate Drive Power and Assign
+                double[] wheelpower = UtilMecanum.Calculate(mdDrive, mdStrafe, -mdTwist, gamepad2.right_bumper);
+
+                for (int i = 0; i < msDriveMotors.length; i++) {
+                    myRobot.motor(msDriveMotors[i]).setPower(wheelpower[i]);
+                }
+        }
         @Override
         public void loop() {
             liftarmMaster();
+            drivetrainMaster();
 
             telemetry.update();
         }
-
     // ===============
     // END METHODS
     // ===============
