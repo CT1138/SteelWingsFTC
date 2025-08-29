@@ -29,7 +29,7 @@ public class Task {
      * @param adServoPositions Array of servo positions
      * @param aiMotorPositions Array of Motor Positions
      * @param adMotorPower Power to apply to motors
-     * @param aiWaitFor
+     * @param aiWaitFor Delay time after task completes
      */
     public Task(double[] adServoPositions, double[] aiMotorPositions, double adMotorPower, int aiWaitFor) {
         this.mdServoPositions = adServoPositions;
