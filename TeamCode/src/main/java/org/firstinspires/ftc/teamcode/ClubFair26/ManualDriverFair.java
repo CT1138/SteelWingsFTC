@@ -1,19 +1,15 @@
 package org.firstinspires.ftc.teamcode.ClubFair26; // package org.firstinspires.ftc.robotcontroller.external.samples;
 
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.Servo;
-import com.qualcomm.robotcore.hardware.TouchSensor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.core.util.Mecanum;
 
 import java.io.IOException;
 
-@TeleOp(name="Manual Driver 26", group="Club Fair 26")
-@Disabled
+@TeleOp(name="Club Fair Driver", group="Club Fair 26")
 public class ManualDriverFair extends OpMode
 {
     // define the motors and whatnot
@@ -56,9 +52,6 @@ public class ManualDriverFair extends OpMode
         double mdStrafe = -gamepad1.left_stick_x;
         double mdTwist = gamepad1.right_stick_x;
 
-        boolean mbSlow = gamepad1.right_bumper;
-        boolean mbSlower = gamepad1.left_bumper;
-
         double mdBrake = gamepad1.right_trigger;
 
         if (gamepad1.dpad_left) mdStrafe = 1 - mdBrake;
@@ -68,18 +61,6 @@ public class ManualDriverFair extends OpMode
 
         if (gamepad1.x) mdTwist = -1 + mdBrake;
         if (gamepad1.b) mdTwist = 1 - mdBrake;
-
-        if (mbSlower) {
-            mdDrive = mdDrive * 0.5;
-            mdStrafe = mdStrafe * 0.5;
-            mdTwist = mdStrafe * 0.5;
-        }
-
-        if (!mbSlow) {
-            mdDrive = mdDrive * 0.75;
-            mdStrafe = mdStrafe * 0.75;
-            mdTwist = mdTwist * 0.75;
-        }
 
         double[] wheelpower = moMecanum.Calculate(mdDrive, mdStrafe, -mdTwist, gamepad2.right_bumper);
 
