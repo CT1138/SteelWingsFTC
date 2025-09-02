@@ -13,7 +13,6 @@ import org.firstinspires.ftc.teamcode.core.util.Mecanum;
 import java.io.IOException;
 
 @TeleOp(name="Manual Driver 26", group="Club Fair 26")
-@Disabled
 public class ManualDriverFair extends OpMode
 {
     // define the motors and whatnot

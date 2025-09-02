@@ -39,7 +39,7 @@ public class Mecanum {
         mbFrontLeft = adDrive + adStrafe + adTwist;
         mbFrontRight = adDrive - adStrafe - adTwist;
         mbRearLeft = adDrive - adStrafe + adTwist;
-        mbRearRight = adDrive + adStrafe + adTwist;
+        mbRearRight = adDrive + adStrafe - adTwist;
 
         // Return Powers
         return new double[]{mbFrontLeft, mbFrontRight, mbRearLeft, mbRearRight};
