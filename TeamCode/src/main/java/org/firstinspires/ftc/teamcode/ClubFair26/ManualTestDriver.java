@@ -9,10 +9,12 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 import org.firstinspires.ftc.teamcode.core.util.Mecanum;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 
-@TeleOp(name="Club Fair Driver", group="Club Fair 26")
-public class ManualDriverFair extends OpMode
+@TeleOp(name="Tester Driver", group="Club Fair 26")
+public class ManualTestDriver extends OpMode
 {
     // define device classes
     Mecanum moMecanum = new Mecanum(0.5);
@@ -21,9 +23,12 @@ public class ManualDriverFair extends OpMode
     private DcMotor moDrive_FrontRight = null;
     private DcMotor moDrive_RearLeft = null;
     private DcMotor moDrive_RearRight = null;
+    private Map<Integer, DcMotor> motorMap = new HashMap<>();
+    private DcMotor moSelectedMotor = null;
+    private int miSelectedMotorIndex = 0;
 
     // throws IOException as some utility classes I wrote require file operations
-    public ManualDriverFair() throws IOException {
+    public ManualTestDriver() throws IOException {
     }
 
     // Prep our motors and servos
@@ -32,8 +37,13 @@ public class ManualDriverFair extends OpMode
         // Single execution on INIT
         moDrive_FrontLeft = hardwareMap.get(DcMotor.class, "FL");
         moDrive_FrontRight = hardwareMap.get(DcMotor.class, "FR");
-        moDrive_RearLeft = hardwareMap.get(DcMotor.class, "RL");
+        moDrive_FrontLeft = hardwareMap.get(DcMotor.class, "RL");
         moDrive_RearRight = hardwareMap.get(DcMotor.class, "RR");
+
+        motorMap.put(0, moDrive_FrontLeft);
+        motorMap.put(1, moDrive_FrontRight);
+        motorMap.put(2, moDrive_RearLeft);
+        motorMap.put(3, moDrive_RearRight);
 
         moDrive_FrontLeft.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         moDrive_FrontRight.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
@@ -47,9 +57,23 @@ public class ManualDriverFair extends OpMode
         moRuntime.reset();
     }
 
+    private int switchMotor(boolean abReset) {
+        if (abReset || moSelectedMotor == null) {
+            miSelectedMotorIndex = 0;
+        } else {
+            if (miSelectedMotorIndex + 1 >= motorMap.size()) {
+                miSelectedMotorIndex = 0;
+            } else {
+                miSelectedMotorIndex++;
+            }
+        }
+
+        moSelectedMotor = motorMap.get(miSelectedMotorIndex);
+        return miSelectedMotorIndex;
+    }
+
     private void drivetrain() {
         Gamepad driver = gamepad1;
-        Gamepad operator = gamepad2;
         // Controls definition
         double mdDrive = driver.left_stick_y;
         double mdStrafe = -driver.left_stick_x;
@@ -61,6 +85,15 @@ public class ManualDriverFair extends OpMode
         boolean mbDriveDown = driver.dpad_down;
         boolean mbTwistLeft = driver.x;
         boolean mbTwistRight = driver.b;
+        boolean mbChangeMotor = driver.right_bumper;
+        boolean mbSingleMotor = driver.left_bumper;
+
+        if(mbChangeMotor) switchMotor(false);
+
+        if(mbSingleMotor) {
+            moSelectedMotor.setPower(driver.left_stick_y);
+            return;
+        }
 
         // Button based controls, use mdBrake to adjust speed
         if (mbDriveLeft) mdStrafe = 1 - mdBrake;
