@@ -1,18 +1,18 @@
-package org.firstinspires.ftc.teamcode.ClubFair25.TeleOP;
+package org.firstinspires.ftc.teamcode.operations.ClubFair25.TeleOP;
 
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.TouchSensor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
-import org.firstinspires.ftc.teamcode.ClubFair25.FairObjectives;
+import org.firstinspires.ftc.teamcode.operations.ClubFair25.FairObjectives;
 import org.firstinspires.ftc.teamcode.core.Objective;
 import org.firstinspires.ftc.teamcode.core.Task;
 import org.firstinspires.ftc.teamcode.core.util.CSVManager;
-
+@Disabled
 @TeleOp(name="Club Fair Demo", group="Into-The-Deep")
 public class ClubFairDemo extends OpMode
 {

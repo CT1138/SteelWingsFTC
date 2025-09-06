@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.FTC2425.Auto;
+package org.firstinspires.ftc.teamcode.operations.FTC2425.Auto;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;

@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.FTC2425.TeleOP; // package org.firstinspires.ftc.robotcontroller.external.samples;
+package org.firstinspires.ftc.teamcode.operations.FTC2425.TeleOP; // package org.firstinspires.ftc.robotcontroller.external.samples;
 
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.hardware.Servo;

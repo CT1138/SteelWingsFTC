@@ -1,5 +1,6 @@
-package org.firstinspires.ftc.teamcode.ClubFair26; // package org.firstinspires.ftc.robotcontroller.external.samples;
+package org.firstinspires.ftc.teamcode.operations.ClubFair26; // package org.firstinspires.ftc.robotcontroller.external.samples;
 
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -10,7 +11,7 @@ import org.firstinspires.ftc.teamcode.core.util.Mecanum;
 
 import java.io.IOException;
 
-
+@Disabled
 @TeleOp(name="Club Fair Driver", group="Club Fair 26")
 public class ManualDriverFair extends OpMode
 {

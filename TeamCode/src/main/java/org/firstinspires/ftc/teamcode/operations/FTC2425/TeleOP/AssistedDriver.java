@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.FTC2425.TeleOP;
+package org.firstinspires.ftc.teamcode.operations.FTC2425.TeleOP;
 
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
@@ -9,7 +9,7 @@ import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.TouchSensor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
-import org.firstinspires.ftc.teamcode.ClubFair25.FairObjectives;
+import org.firstinspires.ftc.teamcode.operations.ClubFair25.FairObjectives;
 
 import org.firstinspires.ftc.teamcode.core.Objective;
 import org.firstinspires.ftc.teamcode.core.Robot;

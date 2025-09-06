@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.ClubFair25;
+package org.firstinspires.ftc.teamcode.operations.ClubFair25;
 
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Servo;
