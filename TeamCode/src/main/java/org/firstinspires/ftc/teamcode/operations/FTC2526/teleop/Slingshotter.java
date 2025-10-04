@@ -5,11 +5,14 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Gamepad;
+import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.hardware.TouchSensor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.core.util.Mecanum;
 
 import java.io.IOException;
+import java.nio.channels.Selector;
 
 @Disabled
 @TeleOp(name="Slingshotter", group="Decode")
@@ -22,6 +25,14 @@ public class Slingshotter extends OpMode
     private DcMotor moDrive_FrontRight = null;
     private DcMotor moDrive_RearLeft = null;
     private DcMotor moDrive_RearRight = null;
+    private DcMotor moAux_Flywheel = null;
+    private DcMotor moAux_Selector = null;
+    private Servo soAux_Hammer = null;
+    private Servo soAux_GrabberWrist = null;
+    private Servo soAux_GrabberClaw = null;
+    private TouchSensor stoAux_Positioner = null;
+
+    private boolean mbMovingChamber = false;
 
     // throws IOException as some utility classes I wrote require file operations
     public Slingshotter() throws IOException {
@@ -30,7 +41,7 @@ public class Slingshotter extends OpMode
     // Prep our motors and servos
     @Override
     public void init() {
-        // Single execution on INIT
+        // Drivetrain Setup
         moDrive_FrontLeft = hardwareMap.get(DcMotor.class, "FL");
         moDrive_FrontRight = hardwareMap.get(DcMotor.class, "FR");
         moDrive_RearLeft = hardwareMap.get(DcMotor.class, "RL");
@@ -40,6 +51,27 @@ public class Slingshotter extends OpMode
         moDrive_FrontRight.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         moDrive_RearRight.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         moDrive_RearLeft.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
+        // Aux Setup
+        // Flywheel: Motor that spins at a high RPM to propel the Artefact on contact
+        // Selector: Motor that cycles the artefacts in our Revolver Chamber
+        // Hammer: Servo that pushes the artefact into the flywheel
+        // Positioner: Touch Sensor to tell what position the chamber is in
+        //              (When one of the fins is at 12:00, the sensor is pressed)
+        moAux_Flywheel = hardwareMap.get(DcMotor.class, "flywheel");
+        moAux_Selector = hardwareMap.get(DcMotor.class, "selector");
+        soAux_Hammer = hardwareMap.get(Servo.class, "hammer");
+        soAux_GrabberWrist = hardwareMap.get(Servo.class, "wrist");
+        soAux_GrabberClaw = hardwareMap.get(Servo.class, "claw");
+        stoAux_Positioner = hardwareMap.get(TouchSensor.class, "Positioner");
+
+        // We will use positions to determine where the chamber needs to be, so the robot must
+        //      be in a constant starting position
+        moAux_Selector.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        moAux_Flywheel.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        moAux_Selector.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        moAux_Flywheel.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
+
     }
 
     // Reset our timer
@@ -50,10 +82,41 @@ public class Slingshotter extends OpMode
 
     private void operator() {
         Gamepad gpOperator = gamepad2;
-        // Controls definition
+        // 9/13/2025 - This code is purely theoretical as we havent built the robot features itself yet
+        int ChamberIndex = 0;
+        int[] ChamberPositions = {30, 60, 90};
+        double FlywheelPower = 0;
+        int SelectorPosition = 0;
+        int HammerPosition = 0;
+        int WristPosition = 0;
+        int ClawPosition = 0;
+
+        // Grabber Controls
         boolean mbGrab = gpOperator.right_bumper;
         boolean mbFlipper = gpOperator.left_bumper;
-        boolean mbLaunch = gpOperator.a;
+
+        // Launcher Controls
+        boolean mbStopFlywheel = gpOperator.dpad_down;
+        boolean mbHammer = gpOperator.dpad_up;
+        boolean mbCycleUp = gpOperator.dpad_left;
+        boolean mbCycleDown = gpOperator.dpad_right;
+
+        // Begin Functions
+        if (!mbStopFlywheel) {
+            FlywheelPower = 1;
+        }
+        if (mbHammer) {
+            HammerPosition = 1;
+        }
+
+        // Pos by Pos solution for Revolving Chamber
+        int cycleUpInt = mbCycleUp ? 1 : 0;
+        int cycleDownInt = mbCycleDown ? 1 : 0;
+        ChamberIndex = ChamberIndex + (cycleUpInt - cycleDownInt);
+        SelectorPosition = ChamberPositions[ChamberIndex];
+
+        moAux_Flywheel.setPower(FlywheelPower);
+        moAux_Selector.setTargetPosition(SelectorPosition);
     }
 
     private void driver() {
