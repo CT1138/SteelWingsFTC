@@ -20,8 +20,15 @@ public class Slingshotter extends OpMode
     // define device classes
     Mecanum moMecanum = new Mecanum(0.75);
 
-    private boolean flywheelOn = false; // Current toggle state
-    private boolean lastAState = false; // What the button was doing last loop
+    // Flywheel state tracking
+    private boolean isSequenceRunning = false;
+    private boolean lastAState = false;
+    private double flywheelPower = 0.1;
+    private double stopperPosition = 0.5;
+
+    // Timer for sequencing
+    private ElapsedTime sequenceTimer = new ElapsedTime();
+    private int sequenceStep = 0;
 
     private final ElapsedTime moRuntime = new ElapsedTime();
     private DcMotor moDrive_FrontLeft = null;
@@ -65,22 +72,60 @@ public class Slingshotter extends OpMode
 
     private void operator() {
         Gamepad gpOperator = gamepad2;
-
         boolean aPressed = gpOperator.a;
 
-        if (aPressed && !lastAState) {
-            flywheelOn = !flywheelOn;
+        // --- Detect new A press ---
+        if (aPressed && !lastAState && !isSequenceRunning) {
+            // Start the timed sequence
+            isSequenceRunning = true;
+            sequenceStep = 0;
+            sequenceTimer.reset();
+        }
+        lastAState = aPressed;
+
+        // --- Sequence logic ---
+        if (isSequenceRunning) {
+            switch (sequenceStep) {
+                case 0:
+                    // Step 1: Flywheel to full power
+                    flywheelPower = 1.0;
+                    sequenceTimer.reset();
+                    sequenceStep++;
+                    break;
+
+                case 1:
+                    // Step 2: Wait 0.5 sec
+                    if (sequenceTimer.seconds() >= 0.5) {
+                        stopperPosition = 0.0;
+                        sequenceTimer.reset();
+                        sequenceStep++;
+                    }
+                    break;
+
+                case 2:
+                    // Step 3: Wait 1 sec
+                    if (sequenceTimer.seconds() >= 1.0) {
+                        stopperPosition = 0.5;
+                        sequenceTimer.reset();
+                        sequenceStep++;
+                    }
+                    break;
+
+                case 3:
+                    // Step 4: Wait 1 sec
+                    if (sequenceTimer.seconds() >= 1.0) {
+                        flywheelPower = 0.1;
+                        isSequenceRunning = false; // Done!
+                    }
+                    break;
+            }
         }
 
-
-        lastAState = aPressed;
-        
-        double flywheelPower = flywheelOn ? 1.0 : 0.1;
+        // --- Apply outputs ---
         moAux_Flywheel.setPower(flywheelPower);
-
-        boolean mbStopper = gpOperator.dpad_up;
-        soAux_Stopper.setPosition(mbStopper ? 0.5 : 0.0);
+        soAux_Stopper.setPosition(stopperPosition);
     }
+
 
     private void driver() {
         Gamepad gpDriver = gamepad1;
