@@ -14,12 +14,15 @@ import org.firstinspires.ftc.teamcode.core.util.Mecanum;
 import java.io.IOException;
 import java.nio.channels.Selector;
 
-@Disabled
 @TeleOp(name="Slingshotter", group="Decode")
 public class Slingshotter extends OpMode
 {
     // define device classes
     Mecanum moMecanum = new Mecanum(0.75);
+
+    private boolean flywheelOn = false; // Current toggle state
+    private boolean lastAState = false; // What the button was doing last loop
+
     private final ElapsedTime moRuntime = new ElapsedTime();
     private DcMotor moDrive_FrontLeft = null;
     private DcMotor moDrive_FrontRight = null;
@@ -62,24 +65,21 @@ public class Slingshotter extends OpMode
 
     private void operator() {
         Gamepad gpOperator = gamepad2;
-        // 9/13/2025 - This code is purely theoretical as we havent built the robot features itself yet
-        double FlywheelPower = 0;
-        int StopperPosition = 0;
 
-        // Launcher Controls
-        boolean mbStopFlywheel = gpOperator.dpad_down;
+        boolean aPressed = gpOperator.a;
+
+        if (aPressed && !lastAState) {
+            flywheelOn = !flywheelOn;
+        }
+
+
+        lastAState = aPressed;
+        
+        double flywheelPower = flywheelOn ? 1.0 : 0.1;
+        moAux_Flywheel.setPower(flywheelPower);
+
         boolean mbStopper = gpOperator.dpad_up;
-
-        // Begin Functions
-        if (!mbStopFlywheel) {
-            FlywheelPower = 1;
-        }
-        if (mbStopper) {
-            StopperPosition = 1;
-        }
-
-        moAux_Flywheel.setPower(FlywheelPower);
-        soAux_Stopper.setPosition(StopperPosition);
+        soAux_Stopper.setPosition(mbStopper ? 0.5 : 0.0);
     }
 
     private void driver() {
