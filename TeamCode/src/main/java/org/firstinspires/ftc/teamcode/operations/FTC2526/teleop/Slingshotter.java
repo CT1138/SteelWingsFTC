@@ -1,6 +1,5 @@
 package org.firstinspires.ftc.teamcode.operations.FTC2526.teleop; // package org.firstinspires.ftc.robotcontroller.external.samples;
 
-import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
@@ -9,12 +8,9 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.hardware.Servo;
-import com.qualcomm.robotcore.hardware.TouchSensor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
-import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
 import org.firstinspires.ftc.teamcode.core.util.Mecanum;
 import org.firstinspires.ftc.teamcode.core.util.PIDdriver;
 
@@ -27,16 +23,20 @@ public class Slingshotter extends OpMode
     Mecanum moMecanum;
     IMU imu;
 
-    // Flywheel state tracking
+    // Auxiliary variables
     private boolean isSequenceRunning = false;
     private boolean lastAState = false;
-    private double flywheelPower = 0.1;
-    private double stopperPosition = 0.5;
+
+        // {x, y}
+        // X = idle, Y = enabled
+    private final double[] flywheelPowers = {0.2, 1};
+    private final double[] stopperPositions = {0.0, 0.5};
+    private final double[] intakePowers = {0.5, 1};
 
     // Timer for sequencing
+    private ElapsedTime moRuntime;
     private ElapsedTime sequenceTimer;
     private int sequenceStep = 0;
-    private ElapsedTime moRuntime;
 
     // Actuators
     private DcMotor moDrive_FrontLeft = null;
@@ -48,7 +48,7 @@ public class Slingshotter extends OpMode
     private Servo soAux_Stopper = null;
 
     // Editors
-    private int pidIndex = 0; // 0 = P, 1 = I, 2 = D
+    private int pidIndex = 0;
     private final String[] pidNames = {"Proportional", "Integral", "Derivative"};
     private boolean lastRightBumper = false;
     private boolean lastLeftBumper = false;
@@ -106,19 +106,20 @@ public class Slingshotter extends OpMode
         moRuntime.reset();
     }
 
-    private void operatorStub() {
-        Gamepad gpOperator = gamepad2;
-        double stopperposition = gpOperator.right_stick_y;
-        soAux_Stopper.setPosition(stopperposition);
-
-    }
     private void operator() {
         Gamepad gpOperator = gamepad2;
         boolean aPressed = gpOperator.a;
+        boolean fastIntake = gpOperator.y;
+
+        double flywheelPower = 0;
+        double stopperPosition = 0;
+        double intakePower = 0;
+
+        intakePower = fastIntake ? intakePowers[0] : intakePowers[1];
 
         if (!isSequenceRunning) {
-            flywheelPower = gpOperator.right_bumper ? 1 : 0.1;
-            stopperPosition = gpOperator.left_bumper ? 0 : 0.5;
+            flywheelPower = gpOperator.right_bumper ? flywheelPowers[1] : flywheelPowers[0];
+            stopperPosition = gpOperator.left_bumper ? stopperPositions[1] : stopperPositions[0];
         }
 
         // --- Detect new A press ---
@@ -135,7 +136,7 @@ public class Slingshotter extends OpMode
             switch (sequenceStep) {
                 case 0:
                     // Step 1: Flywheel to full power
-                    flywheelPower = 1.0;
+                    flywheelPower = flywheelPowers[1];
                     sequenceTimer.reset();
                     sequenceStep++;
                     break;
@@ -143,7 +144,7 @@ public class Slingshotter extends OpMode
                 case 1:
                     // Step 2: Wait 0.5 sec
                     if (sequenceTimer.seconds() >= 0.5) {
-                        stopperPosition = 0;
+                        stopperPosition = stopperPositions[0];
                         sequenceTimer.reset();
                         sequenceStep++;
                     }
@@ -152,7 +153,7 @@ public class Slingshotter extends OpMode
                 case 2:
                     // Step 3: Wait 1 sec
                     if (sequenceTimer.seconds() >= 1.0) {
-                        stopperPosition = 0.5;
+                        stopperPosition = stopperPositions[1];
                         sequenceTimer.reset();
                         sequenceStep++;
                     }
@@ -161,7 +162,7 @@ public class Slingshotter extends OpMode
                 case 3:
                     // Step 4: Wait 1 sec
                     if (sequenceTimer.seconds() >= 1.0) {
-                        flywheelPower = 0.1;
+                        flywheelPower = flywheelPowers[0];
                         isSequenceRunning = false; // Done!
                     }
                     break;
@@ -170,7 +171,7 @@ public class Slingshotter extends OpMode
 
         // --- Apply outputs ---
         moAux_Flywheel.setPower(flywheelPower);
-        moAux_Intake.setPower(1);
+        moAux_Intake.setPower(intakePower);
         soAux_Stopper.setPosition(stopperPosition);
     }
 
@@ -222,10 +223,12 @@ public class Slingshotter extends OpMode
         telemetry.addData("Stopper Position", soAux_Stopper.getPosition());
 
         // Calculate RPM of the flywheel motor
-        double mbFlywheelVelocity = moAux_Flywheel.getVelocity();
-        double miFlywheelRPM = (mbFlywheelVelocity / 28) * 60;
+        double mdFlywheelPower = moAux_Flywheel.getPower();
+        double mdFlywheelVelocity = moAux_Flywheel.getVelocity();
+        double miFlywheelRPM = (mdFlywheelVelocity / 28) * 60;
+        telemetry.addData("Flywheel Power", mdFlywheelPower);
         telemetry.addData("Flywheel RPM", miFlywheelRPM);
-
+        telemetry.addData("Intake Power", moAux_Intake.getPower());
         // Update data
         telemetry.update();
     }
