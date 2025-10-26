@@ -3,12 +3,14 @@ package org.firstinspires.ftc.teamcode.operations.FTC2526.teleop; // package org
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.hardware.TouchSensor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
@@ -25,14 +27,13 @@ public class Slingshotter extends OpMode
     IMU imu;
 
     // Auxiliary variables
-    private boolean isSequenceRunning = false;
-    private boolean lastAState = false;
+    private boolean mbFlywheelActive;
 
         // {x, y}
         // X = idle, Y = enabled
     private final double[] flywheelPowers = {0.0, 1};
-    private final double[] stopperPositions = {0.6, 0.2};
-    private final double[] intakePowers = {0.5, 1};
+    private final double[] stopperPositions = {0.5, 0};
+    private final double[] intakePowers = {0, 1};
 
     // Timer for sequencing
     private ElapsedTime moRuntime;
@@ -46,6 +47,10 @@ public class Slingshotter extends OpMode
     private DcMotorEx moAux_Flywheel = null;
     private DcMotorEx moAux_Intake = null;
     private Servo soAux_Stopper = null;
+
+    // Sensors
+    private TouchSensor soTouch_Loader = null;
+    private ColorSensor soColor_Chamber = null;
 
     // throws IOException as some utility classes I wrote require file operations
     public Slingshotter() throws IOException {
@@ -83,6 +88,10 @@ public class Slingshotter extends OpMode
         //moAux_Flywheel.setDirection(DcMotorSimple.Direction.REVERSE);
         moAux_Flywheel.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
 
+        // Sensors
+        soColor_Chamber = hardwareMap.get(ColorSensor.class, "ChamberColor");
+        soTouch_Loader = hardwareMap.get(TouchSensor.class, "LoadSensor");
+
         // Start timers
         sequenceTimer = new ElapsedTime();
         moRuntime = new ElapsedTime();
@@ -109,15 +118,24 @@ public class Slingshotter extends OpMode
 
     private void operator() {
         Gamepad gpOperator = gamepad2;
-        boolean enableFlywheel = gpOperator.left_bumper;
-        boolean releaseStopper = gpOperator.right_bumper;
+        boolean enableFlywheel = gpOperator.left_bumper || gpOperator.a;
+        boolean enableIntake = gpOperator.dpad_up;
+        boolean releaseStopper = gpOperator.right_bumper || gpOperator.y;
 
+        // Initial Powers
         double flywheelPower = 0;
         double stopperPosition = 0;
         double intakePower = 0;
 
+        // Flywheel
         flywheelPower = enableFlywheel ? flywheelPowers[1] : flywheelPowers[0];
+        mbFlywheelActive = flywheelPower > 0;
 
+        // Intake
+        intakePower = (enableIntake || soTouch_Loader.isPressed()) ? intakePowers[1] : intakePowers[0];
+        if (mbFlywheelActive) intakePower = 0;
+
+        // Stopper
         boolean canFire = releaseStopper && moAux_Flywheel.getVelocity() > 1200.00;
         stopperPosition = canFire ? stopperPositions[1] : stopperPositions[0];
 
@@ -194,6 +212,11 @@ public class Slingshotter extends OpMode
 
     // Method to store telemetry data
     public void telecom() {
+        telemetry.addData("Load Touch Sensor", soTouch_Loader.isPressed());
+        telemetry.addData("Chamber Color (ARGB)", soColor_Chamber.argb());
+        telemetry.addData("Chamber Color (Red)", soColor_Chamber.red());
+        telemetry.addData("Chamber Color (Green)", soColor_Chamber.green());
+        telemetry.addData("Chamber Color (Blue)", soColor_Chamber.blue());
         telemetry.addLine("===================================");
         telemetry.addLine("DriveTrain");
         telemetry.addLine("===================================");

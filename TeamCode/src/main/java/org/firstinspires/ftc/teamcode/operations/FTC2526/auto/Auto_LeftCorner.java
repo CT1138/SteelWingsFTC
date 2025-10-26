@@ -20,6 +20,8 @@ import java.util.TreeMap;
 @Autonomous(name="Auto - Left Corner", group="Decode")
 public class Auto_LeftCorner extends OpMode
 {
+    private Mecanum moMecanum = new Mecanum(0.7);
+
     // Actuators
     private DcMotorEx moDrive_FrontLeft = null;
     private DcMotorEx moDrive_FrontRight = null;
@@ -39,10 +41,10 @@ public class Auto_LeftCorner extends OpMode
         moDrive_RearLeft = hardwareMap.get(DcMotorEx.class, "RL");
         moDrive_RearRight = hardwareMap.get(DcMotorEx.class, "RR");
 
-        moDrive_FrontLeft.setDirection(DcMotorSimple.Direction.REVERSE);
-        moDrive_FrontRight.setDirection(DcMotorSimple.Direction.FORWARD);
-        moDrive_RearLeft.setDirection(DcMotorSimple.Direction.REVERSE);
-        moDrive_RearRight.setDirection(DcMotorSimple.Direction.FORWARD);
+        moDrive_FrontLeft.setDirection(DcMotorSimple.Direction.FORWARD);
+        moDrive_FrontRight.setDirection(DcMotorSimple.Direction.REVERSE);
+        moDrive_RearLeft.setDirection(DcMotorSimple.Direction.FORWARD);
+        moDrive_RearRight.setDirection(DcMotorSimple.Direction.REVERSE);
 
         moDrive_FrontLeft.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         moDrive_FrontRight.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
@@ -56,16 +58,46 @@ public class Auto_LeftCorner extends OpMode
 
     }
 
+    public double[] tractionControl(double[] powers, double[] velocities, double slipThreshold) {
+        // Calculate the average velocity by adding each value and dividing by the number of values
+        double avgVel = (velocities[0] + velocities[1] + velocities[2] + velocities[3]) / 4.0;
+
+        // Loop through each value and calculate how much to reduce its power
+        for (int i = 0; i < 4; i++) {
+            if (avgVel > 50 && velocities[i] > avgVel * slipThreshold) {
+
+                double slipRatio = velocities[i] / avgVel;
+                double reduction = Math.min(0.5, (slipRatio - 1.0) * 0.5);
+                System.out.println("Traction Control activated: " + slipRatio);
+                telemetry.addLine("Traction Control activated: " + slipRatio);
+                powers[i] *= (1.0 - reduction);
+            }
+        }
+
+        return powers;
+    }
+
     // Reset our timer
     @Override
     public void start() {
-        double speed = 0.1;
+        double drive = 0;
+        double strafe = 0.5;
+        double twist = 0;
+
+        double[] velocities = new double[4];
+        velocities[0] = moDrive_FrontLeft.getVelocity();
+        velocities[1] = moDrive_FrontRight.getVelocity();
+        velocities[2] = moDrive_RearLeft.getVelocity();
+        velocities[3] = moDrive_RearRight.getVelocity();
+
+        double[] wheelpower = moMecanum.Calculate(drive, strafe, twist, false);
+        wheelpower = tractionControl(wheelpower, velocities, 1.25);
 
         // Strafe Left
-        moDrive_FrontLeft.setPower(speed);
-        moDrive_FrontRight.setPower(-speed);
-        moDrive_RearLeft.setPower(-speed);
-        moDrive_RearRight.setPower(speed);
+        moDrive_FrontLeft.setPower(wheelpower[0]);
+        moDrive_FrontRight.setPower(wheelpower[1]);
+        moDrive_RearLeft.setPower(wheelpower[2]);
+        moDrive_RearRight.setPower(wheelpower[3]);
     }
 
     // Method to store telemetry data
