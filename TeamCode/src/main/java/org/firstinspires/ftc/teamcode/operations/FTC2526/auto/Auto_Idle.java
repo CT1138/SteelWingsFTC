@@ -1,35 +1,33 @@
-package org.firstinspires.ftc.teamcode.operations.FTC2526.teleop; // package org.firstinspires.ftc.robotcontroller.external.samples;
+package org.firstinspires.ftc.teamcode.operations.FTC2526.auto; // package org.firstinspires.ftc.robotcontroller.external.samples;
 
-import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
-import com.qualcomm.robotcore.hardware.Gamepad;
-import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.hardware.Servo;
-import com.qualcomm.robotcore.util.ElapsedTime;
 
-import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.teamcode.core.util.Mecanum;
 
 import java.io.IOException;
-import java.util.TreeMap;
 
-@Autonomous(name="Auto - Left Corner", group="Decode")
-public class Auto_LeftCorner extends OpMode
+@Autonomous(name="Auto - Idle", group="Decode")
+public class Auto_Idle extends OpMode
 {
     private Mecanum moMecanum = new Mecanum(0.7);
 
     // Actuators
+    private final double[] stopperPositions = {0.5, 0};
+    private final double[] intakePowers = {0, 1, 0.5};
     private DcMotorEx moDrive_FrontLeft = null;
     private DcMotorEx moDrive_FrontRight = null;
     private DcMotorEx moDrive_RearLeft = null;
     private DcMotorEx moDrive_RearRight = null;
+    private DcMotorEx moAux_Intake = null;
+    private Servo soAux_Stopper = null;
 
     // throws IOException as some utility classes I wrote require file operations
-    public Auto_LeftCorner() throws IOException {
+    public Auto_Idle() throws IOException {
     }
 
     // Prep our motors and servos
@@ -40,6 +38,9 @@ public class Auto_LeftCorner extends OpMode
         moDrive_FrontRight = hardwareMap.get(DcMotorEx.class, "FR");
         moDrive_RearLeft = hardwareMap.get(DcMotorEx.class, "RL");
         moDrive_RearRight = hardwareMap.get(DcMotorEx.class, "RR");
+
+        moAux_Intake = hardwareMap.get(DcMotorEx.class, "Intake");
+        soAux_Stopper = hardwareMap.get(Servo.class, "Stopper");
 
         moDrive_FrontLeft.setDirection(DcMotorSimple.Direction.FORWARD);
         moDrive_FrontRight.setDirection(DcMotorSimple.Direction.REVERSE);
@@ -80,24 +81,8 @@ public class Auto_LeftCorner extends OpMode
     // Reset our timer
     @Override
     public void start() {
-        double drive = 0;
-        double strafe = 0.5;
-        double twist = 0;
-
-        double[] velocities = new double[4];
-        velocities[0] = moDrive_FrontLeft.getVelocity();
-        velocities[1] = moDrive_FrontRight.getVelocity();
-        velocities[2] = moDrive_RearLeft.getVelocity();
-        velocities[3] = moDrive_RearRight.getVelocity();
-
-        double[] wheelpower = moMecanum.Calculate(drive, strafe, twist, false);
-        wheelpower = tractionControl(wheelpower, velocities, 1.25);
-
-        // Strafe Left
-        moDrive_FrontLeft.setPower(wheelpower[0]);
-        moDrive_FrontRight.setPower(wheelpower[1]);
-        moDrive_RearLeft.setPower(wheelpower[2]);
-        moDrive_RearRight.setPower(wheelpower[3]);
+       soAux_Stopper.setPosition(stopperPositions[0]);
+       moAux_Intake.setPower(intakePowers[2]);
     }
 
     // Method to store telemetry data
