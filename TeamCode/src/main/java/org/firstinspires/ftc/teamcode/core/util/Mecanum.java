@@ -19,21 +19,18 @@ public class Mecanum {
      * @param adDrive The forward/backward movement input
      * @param adStrafe The left/right movement input
      * @param adTwist The rotation movement input
-     * @param abUncap The button to press to release the 75% speed cap
      * @return Returns a double array for each motor in the order: Front Left, Front Right, Rear Left, Rear Right
      */
-    public double[] Calculate(double adDrive, double adStrafe, double adTwist, boolean abUncap) {
+
+    public double[] Calculate(double adDrive, double adStrafe, double adTwist, boolean abBrake) {
+        return new double[]{0, 0, 0, 0};
+    }
+    public double[] Calculate(double adDrive, double adStrafe, double adTwist) {
         double mbFrontLeft = 0.0;
         double mbFrontRight = 0.0;
         double mbRearLeft = 0.0;
         double mbRearRight = 0.0;
 
-        if (!abUncap) {
-            double mdModifier = mdDefaultSpeed;
-            adDrive = adDrive * mdModifier;
-            adStrafe = adStrafe * mdModifier;
-            adTwist = adTwist * mdModifier;
-        }
 
         // Calculate Powers
         mbFrontLeft = adDrive + adStrafe + adTwist;

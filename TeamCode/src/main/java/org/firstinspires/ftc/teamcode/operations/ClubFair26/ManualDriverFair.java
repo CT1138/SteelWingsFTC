@@ -74,7 +74,7 @@ public class ManualDriverFair extends OpMode
 
         // Calculate the target power for all wheels assuming a mecanum drivetrain is in use
         // see teamcode.core.util.Mecanum
-        double[] wheelpower = moMecanum.Calculate(mdTwist, mdStrafe, -mdDrive, gamepad2.right_bumper);
+        double[] wheelpower = moMecanum.Calculate(mdTwist, mdStrafe, -mdDrive);
 
         moDrive_FrontLeft.setPower(wheelpower[0]);
         moDrive_FrontRight.setPower(wheelpower[1]);

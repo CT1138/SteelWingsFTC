@@ -17,27 +17,32 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.teamcode.core.util.Mecanum;
 
 import java.io.IOException;
-import java.util.TreeMap;
 
 @TeleOp(name="Slingshotter", group="Decode")
 public class Slingshotter extends OpMode
 {
+    private final int DRIVE_MAX_RPM = 6000;
+    private final int DRIVE_MIN_RPM = 0;
+    private final int FLYWHEEL_MAX_RPM = 4500;
+    private final int FLYWHEEL_MIN_RPM = 0;
+    private final double[] flywheelVelocities = {
+            rpmToVelocity(FLYWHEEL_MIN_RPM, 28),
+            rpmToVelocity(FLYWHEEL_MAX_RPM,28)
+    };
+    private final double[] stopperPositions = {0.5, 0};
+    private final double[] intakePowers = {0, 1};
     // define device classes
-    Mecanum moMecanum;
-    IMU imu;
+    private Mecanum moMecanum;
+    private IMU imu;
 
     // Auxiliary variables
     private boolean mbFlywheelActive;
 
         // {x, y}
         // X = idle, Y = enabled
-    private final double[] flywheelPowers = {0.0, 1};
-    private final double[] stopperPositions = {0.5, 0};
-    private final double[] intakePowers = {0, 1};
 
     // Timer for sequencing
     private ElapsedTime moRuntime;
-    private ElapsedTime sequenceTimer;
 
     // Actuators
     private DcMotorEx moDrive_FrontLeft = null;
@@ -54,6 +59,14 @@ public class Slingshotter extends OpMode
 
     // throws IOException as some utility classes I wrote require file operations
     public Slingshotter() throws IOException {
+    }
+
+    private double rpmToVelocity(double RPM, int countsPerRevolution) {
+        return ( RPM / 60 ) * countsPerRevolution;
+    }
+
+    private double velocityToRPM(double Velocity, int countsPerRevolution) {
+        return ( Velocity / countsPerRevolution ) * 60;
     }
 
     // Prep our motors and servos
@@ -93,7 +106,6 @@ public class Slingshotter extends OpMode
         soTouch_Loader = hardwareMap.get(TouchSensor.class, "LoadSensor");
 
         // Start timers
-        sequenceTimer = new ElapsedTime();
         moRuntime = new ElapsedTime();
 
         // PID Drive initialization
@@ -123,35 +135,35 @@ public class Slingshotter extends OpMode
         boolean releaseStopper = gpOperator.right_bumper || gpOperator.y;
 
         // Initial Powers
-        double flywheelPower = 0;
+        double flywheelVelocity = 0;
         double stopperPosition = 0;
         double intakePower = 0;
 
         // Flywheel
-        flywheelPower = enableFlywheel ? flywheelPowers[1] : flywheelPowers[0];
-        mbFlywheelActive = flywheelPower > 0;
+        flywheelVelocity = enableFlywheel ? flywheelVelocities[1] : flywheelVelocities[0];
+        mbFlywheelActive = flywheelVelocity > 0;
 
         // Intake
         intakePower = (enableIntake || soTouch_Loader.isPressed()) ? intakePowers[1] : intakePowers[0];
         if (mbFlywheelActive) intakePower = 0;
 
         // Stopper
-        boolean canFire = releaseStopper && moAux_Flywheel.getVelocity() > 1200.00;
+        boolean canFire = releaseStopper && moAux_Flywheel.getVelocity() >= rpmToVelocity(42500, 28);
         stopperPosition = canFire ? stopperPositions[1] : stopperPositions[0];
 
-        if (flywheelPower > 0) {
+        if (flywheelVelocity > 0) {
             gpOperator.rumble(10);
         }
 
         // --- Apply outputs ---
-        moAux_Flywheel.setPower(flywheelPower);
+        moAux_Flywheel.setVelocity(flywheelVelocity);
         moAux_Intake.setPower(intakePower);
         soAux_Stopper.setPosition(stopperPosition);
     }
 
     // Traction Control system
     public double[] tractionControl(double[] powers, double[] velocities, double slipThreshold) {
-        // Calculate the average velosity by adding each value and dividing by the number of values
+        // Calculate the average velocity by adding each value and dividing by the number of values
         double avgVel = (velocities[0] + velocities[1] + velocities[2] + velocities[3]) / 4.0;
 
         // Loop through each value and calculate how much to reduce its power
@@ -172,28 +184,19 @@ public class Slingshotter extends OpMode
     private void driver() {
         Gamepad gpDriver = gamepad1;
         // Controls definition
-        double mdDrive = gpDriver.left_stick_y;
-        double mdStrafe = -gpDriver.left_stick_x;
+        double mdDrive = gpDriver.right_stick_y;
+        int miStrafeLeft = gpDriver.left_bumper ? 1 : 0;
+        int miStrafeRight = gpDriver.right_bumper ? 1 : 0;
+        double mdStrafe = -gpDriver.left_stick_x + (miStrafeLeft - miStrafeRight);
         double mdTwist = -gpDriver.right_stick_x;
-        double mdBrake = gpDriver.right_trigger;
-        boolean mbDriveLeft = gpDriver.dpad_left;
-        boolean mbDriveRight = gpDriver.dpad_right;
-        boolean mbDriveUp = gpDriver.dpad_up;
-        boolean mbDriveDown = gpDriver.dpad_down;
-        boolean mbTwistLeft = gpDriver.x;
-        boolean mbTwistRight = gpDriver.b;
+        double mdGas = gpDriver.right_trigger;
+        double mdBrake = gpDriver.left_trigger;
 
-        // Button based controls, use mdBrake to adjust speed
-        if (mbDriveLeft) mdStrafe = 1 - mdBrake;
-        if (mbDriveRight) mdStrafe = -1 + mdBrake;
-        if (mbDriveUp) mdDrive = -1 + mdBrake;
-        if (mbDriveDown) mdDrive = 1 - mdBrake;
-
-        if (mbTwistLeft) mdTwist = 1 - mdBrake;
-        if (mbTwistRight) mdTwist = -1 + mdBrake;
-
-        // Calculate the target power for all wheels assuming a mecanum drivetrain is in use
-        // see teamcode.core.util.Mecanum
+        double mdModifier = 0.5 + (mdGas - mdBrake) * 0.5;
+        mdModifier = Math.max(0, Math.min(1, mdModifier));
+        mdDrive *= mdModifier;
+        mdStrafe *= mdModifier;
+        mdTwist *= mdModifier;
 
         double[] velocities = new double[4];
         velocities[0] = moDrive_FrontLeft.getVelocity();
@@ -201,13 +204,15 @@ public class Slingshotter extends OpMode
         velocities[2] = moDrive_RearLeft.getVelocity();
         velocities[3] = moDrive_RearRight.getVelocity();
 
-        double[] wheelpower = moMecanum.Calculate(mdDrive, mdStrafe, mdTwist, gamepad1.right_bumper);
+        double[] wheelpower = moMecanum.Calculate(mdDrive, mdStrafe, mdTwist);
         wheelpower = tractionControl(wheelpower, velocities, 1.1);
 
-        moDrive_FrontLeft.setPower(wheelpower[0]);
-        moDrive_FrontRight.setPower(wheelpower[1]);
-        moDrive_RearLeft.setPower(wheelpower[2]);
-        moDrive_RearRight.setPower(wheelpower[3]);
+
+        double DRIVE_MAX_VELOCITY = rpmToVelocity(DRIVE_MAX_RPM, 28);
+        moDrive_FrontLeft.setVelocity(wheelpower[0] * DRIVE_MAX_VELOCITY);
+        moDrive_FrontRight.setVelocity(wheelpower[1] * DRIVE_MAX_VELOCITY);
+        moDrive_RearLeft.setVelocity(wheelpower[2] * DRIVE_MAX_VELOCITY);
+        moDrive_RearRight.setVelocity(wheelpower[3] * DRIVE_MAX_VELOCITY);
     }
 
     // Method to store telemetry data
@@ -221,6 +226,7 @@ public class Slingshotter extends OpMode
         telemetry.addLine("DriveTrain");
         telemetry.addLine("===================================");
         telemetry.addData("Calculated Heading:", getHeading());
+
         telemetry.addData("Front Left Power", moDrive_FrontLeft.getPower());
         telemetry.addData("Front Right Power", moDrive_FrontRight.getPower());
         telemetry.addData("Rear Left Power", moDrive_RearLeft.getPower());
@@ -243,7 +249,7 @@ public class Slingshotter extends OpMode
         // Calculate RPM of the flywheel motor
         double mdFlywheelPower = moAux_Flywheel.getPower();
         double mdFlywheelVelocity = moAux_Flywheel.getVelocity();
-        double miFlywheelRPM = (mdFlywheelVelocity / 28) * 60;
+        double miFlywheelRPM = velocityToRPM(mdFlywheelVelocity, 28);
         telemetry.addData("Flywheel Power", mdFlywheelPower);
         telemetry.addData("Flywheel Velocity", mdFlywheelVelocity);
         telemetry.addData("Flywheel RPM", miFlywheelRPM);
