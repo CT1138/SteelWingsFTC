@@ -21,41 +21,75 @@ import java.io.IOException;
 @TeleOp(name="Slingshotter", group="Decode")
 public class Slingshotter extends OpMode
 {
-    private final int DRIVE_MAX_RPM = 6000;
-    private final int DRIVE_MIN_RPM = 0;
-    private final int FLYWHEEL_MAX_RPM = 4500;
-    private final int FLYWHEEL_MIN_RPM = 0;
+    // CONTROLS:
+    private final Gamepad gpDriver = gamepad1;
+    private Gamepad gpDriver_previous = new Gamepad();
+    private final Gamepad gpOperator = gamepad2;
+    private Gamepad gpOperator_previous = new Gamepad();
+
+        private final double    CONTROL_DRIVE = gpDriver.right_stick_y;
+        private final int       CONTROL_STRAFE_LEFT = gpDriver.left_bumper ? 1 : 0;
+        private final int       CONTROL_STRAFE_RIGHT = gpDriver.right_bumper ? 1 : 0;
+        private final double    CONTROL_STRAFE = -gpDriver.left_stick_x + (CONTROL_STRAFE_LEFT - CONTROL_STRAFE_RIGHT);
+        private final double    CONTROL_TWIST = -gpDriver.right_stick_x;
+        private final double    CONTROL_GAS = gpDriver.right_trigger;
+        private final double    CONTROL_BRAKE = gpDriver.left_trigger;
+        private final boolean   CONTROL_FLYWHEEL = gpOperator.left_bumper || gpOperator.a;
+        private final boolean   CONTROL_INTAKE = gpOperator.dpad_up;
+        private final boolean   CONTROL_STOPPER = gpOperator.right_bumper || gpOperator.y;
+
+    // SETTINGS
+        private final double    DRIVE_MAX_SPEED = 0.4;
+        private final int       DRIVE_MAX_RPM = 5500;
+        private final double    DRIVE_SLIP_THRESHOLD = 1.2;
+        private final int       FLYWHEEL_MAX_RPM = 4500;
+        private final int       INTAKE_MAX_RPM = 100;
+
+        private final int       DRIVE_COUNTS_PER_REVOLUTION = 28;
+        private final int       FLYWHEEL_COUNTS_PER_REVOLUTION = 28;
+        private final int       INTAKE_COUNTS_PER_REVOLUTION = 288;
+        RevHubOrientationOnRobot.LogoFacingDirection
+                CONTROL_LOGO_DIRECTION = RevHubOrientationOnRobot.LogoFacingDirection.RIGHT;
+        RevHubOrientationOnRobot.UsbFacingDirection
+                CONTROL_USB_DIRECTION = RevHubOrientationOnRobot.UsbFacingDirection.UP;
+
+
+    // SYSTEM VARIABLES -- LEAVE BE
+    private boolean flywheelActive;
+
+    // FINALS
     private final double[] flywheelVelocities = {
-            rpmToVelocity(FLYWHEEL_MIN_RPM, 28),
-            rpmToVelocity(FLYWHEEL_MAX_RPM,28)
+            0,
+            rpmToVelocity(
+                    FLYWHEEL_MAX_RPM,
+                    FLYWHEEL_COUNTS_PER_REVOLUTION
+            )
     };
-    private final double[] stopperPositions = {0.5, 0};
-    private final double[] intakePowers = {0, 1};
-    // define device classes
-    private Mecanum moMecanum;
+    private final double[] intakeVelocities = {
+            0,
+            rpmToVelocity(
+                    INTAKE_MAX_RPM,
+                    INTAKE_COUNTS_PER_REVOLUTION
+            )
+    };
+    private final double[] stopperPositions = {
+            0.5,
+            0
+    };
+
+    // Objects
+    private Mecanum mecanum;
     private IMU imu;
-
-    // Auxiliary variables
-    private boolean mbFlywheelActive;
-
-        // {x, y}
-        // X = idle, Y = enabled
-
-    // Timer for sequencing
-    private ElapsedTime moRuntime;
-
-    // Actuators
-    private DcMotorEx moDrive_FrontLeft = null;
-    private DcMotorEx moDrive_FrontRight = null;
-    private DcMotorEx moDrive_RearLeft = null;
-    private DcMotorEx moDrive_RearRight = null;
-    private DcMotorEx moAux_Flywheel = null;
-    private DcMotorEx moAux_Intake = null;
-    private Servo soAux_Stopper = null;
-
-    // Sensors
-    private TouchSensor soTouch_Loader = null;
-    private ColorSensor soColor_Chamber = null;
+    private ElapsedTime elapsedTime;
+    private ElapsedTime rampTime;
+    private DcMotorEx driveFL = null;
+    private DcMotorEx driveFR = null;
+    private DcMotorEx driveRL = null;
+    private DcMotorEx driveRR = null;
+    private DcMotorEx auxFlywheel = null;
+    private DcMotorEx auxIntake = null;
+    private Servo auxStopper = null;
+    private TouchSensor loadSensor = null;
 
     // throws IOException as some utility classes I wrote require file operations
     public Slingshotter() throws IOException {
@@ -73,187 +107,167 @@ public class Slingshotter extends OpMode
     @Override
     public void init() {
         // Actuator setup
-        moDrive_FrontLeft = hardwareMap.get(DcMotorEx.class, "FL");
-        moDrive_FrontRight = hardwareMap.get(DcMotorEx.class, "FR");
-        moDrive_RearLeft = hardwareMap.get(DcMotorEx.class, "RL");
-        moDrive_RearRight = hardwareMap.get(DcMotorEx.class, "RR");
+        DcMotorEx[] driveTrainMotors = {driveFL, driveFR, driveRL, driveRR};
+        driveFL = hardwareMap.get(DcMotorEx.class, "FL");
+        driveFR = hardwareMap.get(DcMotorEx.class, "FR");
+        driveRL = hardwareMap.get(DcMotorEx.class, "RL");
+        driveRR = hardwareMap.get(DcMotorEx.class, "RR");
 
-        moDrive_FrontLeft.setDirection(DcMotorSimple.Direction.REVERSE);
-        moDrive_FrontRight.setDirection(DcMotorSimple.Direction.FORWARD);
-        moDrive_RearLeft.setDirection(DcMotorSimple.Direction.REVERSE);
-        moDrive_RearRight.setDirection(DcMotorSimple.Direction.FORWARD);
+        for (DcMotorEx motor : driveTrainMotors) {
+            motor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+            motor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        }
 
-        moDrive_FrontLeft.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        moDrive_FrontRight.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        moDrive_RearRight.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        moDrive_RearLeft.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        driveFL.setDirection(DcMotorSimple.Direction.REVERSE);
+        driveFR.setDirection(DcMotorSimple.Direction.FORWARD);
+        driveRL.setDirection(DcMotorSimple.Direction.REVERSE);
+        driveRR.setDirection(DcMotorSimple.Direction.FORWARD);
 
-        moDrive_FrontLeft.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        moDrive_FrontRight.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        moDrive_RearRight.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        moDrive_RearLeft.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        auxIntake = hardwareMap.get(DcMotorEx.class, "Intake");
+        auxIntake.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        auxIntake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
-        moAux_Intake = hardwareMap.get(DcMotorEx.class, "Intake");
-        moAux_Flywheel = hardwareMap.get(DcMotorEx.class, "Flywheel");
-        soAux_Stopper = hardwareMap.get(Servo.class, "Stopper");
+        auxFlywheel = hardwareMap.get(DcMotorEx.class, "Flywheel");
+        auxFlywheel.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        auxFlywheel.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
 
-        moAux_Flywheel.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        //moAux_Flywheel.setDirection(DcMotorSimple.Direction.REVERSE);
-        moAux_Flywheel.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
-
-        // Sensors
-        soColor_Chamber = hardwareMap.get(ColorSensor.class, "ChamberColor");
-        soTouch_Loader = hardwareMap.get(TouchSensor.class, "LoadSensor");
-
+        loadSensor = hardwareMap.get(TouchSensor.class, "LoadSensor");
+        auxStopper = hardwareMap.get(Servo.class, "Stopper");
         // Start timers
-        moRuntime = new ElapsedTime();
+        elapsedTime = new ElapsedTime();
+        rampTime = new ElapsedTime();
 
         // PID Drive initialization
         imu = hardwareMap.get(IMU.class, "imu");
-        RevHubOrientationOnRobot.LogoFacingDirection logoDir = RevHubOrientationOnRobot.LogoFacingDirection.RIGHT;
-        RevHubOrientationOnRobot.UsbFacingDirection usbDir = RevHubOrientationOnRobot.UsbFacingDirection.BACKWARD;
 
-        imu.initialize(new IMU.Parameters(new RevHubOrientationOnRobot(logoDir, usbDir)));
+        imu.initialize(new IMU.Parameters(new RevHubOrientationOnRobot(CONTROL_LOGO_DIRECTION, CONTROL_USB_DIRECTION)));
 
-        moMecanum = new Mecanum(0.45);
-    }
-
-    private double getHeading() {
-        return imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES);
+        mecanum = new Mecanum(0.45);
     }
 
     // Reset our timer
     @Override
     public void start() {
-        moRuntime.reset();
+        elapsedTime.reset();
+        rampTime.reset();
     }
 
     private void operator() {
-        Gamepad gpOperator = gamepad2;
-        boolean enableFlywheel = gpOperator.left_bumper || gpOperator.a;
-        boolean enableIntake = gpOperator.dpad_up;
-        boolean releaseStopper = gpOperator.right_bumper || gpOperator.y;
-
         // Initial Powers
         double flywheelVelocity = 0;
         double stopperPosition = 0;
-        double intakePower = 0;
+        double intakeVelocity = 0;
 
         // Flywheel
-        flywheelVelocity = enableFlywheel ? flywheelVelocities[1] : flywheelVelocities[0];
-        mbFlywheelActive = flywheelVelocity > 0;
+        flywheelVelocity = CONTROL_FLYWHEEL ? flywheelVelocities[1] : flywheelVelocities[0];
+        flywheelActive = flywheelVelocity > 0;
 
         // Intake
-        intakePower = (enableIntake || soTouch_Loader.isPressed()) ? intakePowers[1] : intakePowers[0];
-        if (mbFlywheelActive) intakePower = 0;
+        intakeVelocity = (CONTROL_INTAKE || loadSensor.isPressed()) ? intakeVelocities[1] : intakeVelocities[0];
+        if (flywheelActive) intakeVelocity = 0;
 
         // Stopper
-        boolean canFire = releaseStopper && moAux_Flywheel.getVelocity() >= rpmToVelocity(42500, 28);
-        stopperPosition = canFire ? stopperPositions[1] : stopperPositions[0];
+        stopperPosition = CONTROL_STOPPER ? stopperPositions[1] : stopperPositions[0];
+
 
         if (flywheelVelocity > 0) {
-            gpOperator.rumble(10);
+            gpOperator.rumble(250);
         }
 
         // --- Apply outputs ---
-        moAux_Flywheel.setVelocity(flywheelVelocity);
-        moAux_Intake.setPower(intakePower);
-        soAux_Stopper.setPosition(stopperPosition);
+        auxFlywheel.setVelocity(flywheelVelocity);
+        auxIntake.setVelocity(intakeVelocity);
+        auxStopper.setPosition(stopperPosition);
     }
 
+    private double getHeading() {
+        return imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES);
+    }
     // Traction Control system
-    public double[] tractionControl(double[] powers, double[] velocities, double slipThreshold) {
+    private double[] tractionControl(double[] powers, double[] velocities, double slipThreshold) {
         // Calculate the average velocity by adding each value and dividing by the number of values
-        double avgVel = (velocities[0] + velocities[1] + velocities[2] + velocities[3]) / 4.0;
+        double avgVelocity = (velocities[0] + velocities[1] + velocities[2] + velocities[3]) / 4.0;
 
         // Loop through each value and calculate how much to reduce its power
         for (int i = 0; i < 4; i++) {
-            if (avgVel > 50 && velocities[i] > avgVel * slipThreshold) {
+            if (avgVelocity > 50 && velocities[i] > avgVelocity * slipThreshold) {
+                gpDriver.rumble(250);
 
-                double slipRatio = velocities[i] / avgVel;
+                double slipRatio = velocities[i] / avgVelocity;
                 double reduction = Math.min(0.5, (slipRatio - 1.0) * 0.5);
-                System.out.println("Traction Control activated: " + slipRatio);
+
                 powers[i] *= (1.0 - reduction);
             }
         }
 
+        telemetry.addData("Traction Control Factors", powers);
         return powers;
     }
 
-
     private void driver() {
-        Gamepad gpDriver = gamepad1;
-        // Controls definition
-        double mdDrive = gpDriver.right_stick_y;
-        int miStrafeLeft = gpDriver.left_bumper ? 1 : 0;
-        int miStrafeRight = gpDriver.right_bumper ? 1 : 0;
-        double mdStrafe = -gpDriver.left_stick_x + (miStrafeLeft - miStrafeRight);
-        double mdTwist = -gpDriver.right_stick_x;
-        double mdGas = gpDriver.right_trigger;
-        double mdBrake = gpDriver.left_trigger;
-
-        double mdModifier = 0.5 + (mdGas - mdBrake) * 0.5;
-        mdModifier = Math.max(0, Math.min(1, mdModifier));
-        mdDrive *= mdModifier;
-        mdStrafe *= mdModifier;
-        mdTwist *= mdModifier;
+        double drive = CONTROL_DRIVE;
+        double strafe = CONTROL_STRAFE;
+        double twist = CONTROL_TWIST;
 
         double[] velocities = new double[4];
-        velocities[0] = moDrive_FrontLeft.getVelocity();
-        velocities[1] = moDrive_FrontRight.getVelocity();
-        velocities[2] = moDrive_RearLeft.getVelocity();
-        velocities[3] = moDrive_RearRight.getVelocity();
+        velocities[0] = driveFL.getVelocity();
+        velocities[1] = driveFR.getVelocity();
+        velocities[2] = driveRL.getVelocity();
+        velocities[3] = driveRR.getVelocity();
 
-        double[] wheelpower = moMecanum.Calculate(mdDrive, mdStrafe, mdTwist);
-        wheelpower = tractionControl(wheelpower, velocities, 1.1);
+        double modifier = DRIVE_MAX_SPEED + (CONTROL_GAS - CONTROL_BRAKE) * 0.5;
+        modifier = Math.max(0, Math.min(1, modifier));
+        drive *= modifier;
+        strafe *= modifier;
+        twist *= modifier;
 
+        double[] wheelPower = mecanum.Calculate(drive, strafe, twist);
+        wheelPower = tractionControl(wheelPower, velocities, DRIVE_SLIP_THRESHOLD);
 
-        double DRIVE_MAX_VELOCITY = rpmToVelocity(DRIVE_MAX_RPM, 28);
-        moDrive_FrontLeft.setVelocity(wheelpower[0] * DRIVE_MAX_VELOCITY);
-        moDrive_FrontRight.setVelocity(wheelpower[1] * DRIVE_MAX_VELOCITY);
-        moDrive_RearLeft.setVelocity(wheelpower[2] * DRIVE_MAX_VELOCITY);
-        moDrive_RearRight.setVelocity(wheelpower[3] * DRIVE_MAX_VELOCITY);
+        double maxVelocity = rpmToVelocity(DRIVE_MAX_RPM, DRIVE_COUNTS_PER_REVOLUTION);
+        driveFL.setVelocity(wheelPower[0] * maxVelocity);
+        driveFR.setVelocity(wheelPower[1] * maxVelocity);
+        driveRL.setVelocity(wheelPower[2] * maxVelocity);
+        driveRR.setVelocity(wheelPower[3] * maxVelocity);
     }
 
     // Method to store telemetry data
-    public void telecom() {
-        telemetry.addData("Load Touch Sensor", soTouch_Loader.isPressed());
-        telemetry.addData("Chamber Color (ARGB)", soColor_Chamber.argb());
-        telemetry.addData("Chamber Color (Red)", soColor_Chamber.red());
-        telemetry.addData("Chamber Color (Green)", soColor_Chamber.green());
-        telemetry.addData("Chamber Color (Blue)", soColor_Chamber.blue());
+    private void telecom() {
         telemetry.addLine("===================================");
         telemetry.addLine("DriveTrain");
         telemetry.addLine("===================================");
         telemetry.addData("Calculated Heading:", getHeading());
-
-        telemetry.addData("Front Left Power", moDrive_FrontLeft.getPower());
-        telemetry.addData("Front Right Power", moDrive_FrontRight.getPower());
-        telemetry.addData("Rear Left Power", moDrive_RearLeft.getPower());
-        telemetry.addData("Rear Right Power", moDrive_RearRight.getPower());
-
-        telemetry.addData("Rear Left Velocity", moDrive_RearLeft.getVelocity());
-        telemetry.addData("Rear Right Velocity", moDrive_RearRight.getVelocity());
-        telemetry.addData("Front Left Velocity", moDrive_FrontLeft.getVelocity());
-        telemetry.addData("Front Right Velocity", moDrive_FrontRight.getVelocity());
-
-        telemetry.addData("Front Left Position", moDrive_FrontLeft.getCurrentPosition());
-        telemetry.addData("Front Right Position", moDrive_FrontRight.getCurrentPosition());
-        telemetry.addData("Rear Left Position", moDrive_RearLeft.getCurrentPosition());
-        telemetry.addData("Rear Right Position", moDrive_RearRight.getCurrentPosition());
+        telemetry.addLine("");
+        telemetry.addData("Front Left Power", driveFL.getPower());
+        telemetry.addData("Front Left Velocity", driveFL.getVelocity());
+        telemetry.addData("Front Left RPM", velocityToRPM(driveFL.getVelocity(), DRIVE_COUNTS_PER_REVOLUTION));
+        telemetry.addData("Front Left Position", driveFL.getCurrentPosition());
+        telemetry.addLine("");
+        telemetry.addData("Front Right Power", driveFR.getPower());
+        telemetry.addData("Front Right Velocity", driveFR.getVelocity());
+        telemetry.addData("Front Right RPM", velocityToRPM(driveFR.getVelocity(), DRIVE_COUNTS_PER_REVOLUTION));
+        telemetry.addData("Front Right Position", driveFR.getCurrentPosition());
+        telemetry.addLine("");
+        telemetry.addData("Rear Left Power", driveRL.getPower());
+        telemetry.addData("Rear Left Velocity", driveRL.getVelocity());
+        telemetry.addData("Rear Left RPM", velocityToRPM(driveRL.getVelocity(), DRIVE_COUNTS_PER_REVOLUTION));
+        telemetry.addData("Rear Left Position", driveRL.getCurrentPosition());
+        telemetry.addLine("");
+        telemetry.addData("Rear Right Power", driveRR.getPower());
+        telemetry.addData("Rear Right Velocity", driveRR.getVelocity());
+        telemetry.addData("Rear Right RPM", velocityToRPM(driveRR.getVelocity(), DRIVE_COUNTS_PER_REVOLUTION));
+        telemetry.addData("Rear Right Position", driveRR.getCurrentPosition());
         telemetry.addLine("===================================");
         telemetry.addLine("Auxiliary");
         telemetry.addLine("===================================");
-        telemetry.addData("Stopper Position", soAux_Stopper.getPosition());
-
-        // Calculate RPM of the flywheel motor
-        double mdFlywheelPower = moAux_Flywheel.getPower();
-        double mdFlywheelVelocity = moAux_Flywheel.getVelocity();
-        double miFlywheelRPM = velocityToRPM(mdFlywheelVelocity, 28);
-        telemetry.addData("Flywheel Power", mdFlywheelPower);
-        telemetry.addData("Flywheel Velocity", mdFlywheelVelocity);
-        telemetry.addData("Flywheel RPM", miFlywheelRPM);
-        telemetry.addData("Intake Power", moAux_Intake.getPower());
+        telemetry.addData("Stopper Position", auxStopper.getPosition());
+        telemetry.addData("Flywheel Power", auxFlywheel.getPower());
+        telemetry.addData("Flywheel Velocity", auxFlywheel.getVelocity());
+        telemetry.addData("Flywheel RPM", velocityToRPM(auxFlywheel.getVelocity(), FLYWHEEL_COUNTS_PER_REVOLUTION));
+        telemetry.addLine("");
+        telemetry.addData("Intake Power", auxIntake.getPower());
+        telemetry.addData("Intake Velocity", auxIntake.getVelocity());
+        telemetry.addData("Intake RPM", velocityToRPM(auxIntake.getVelocity(), INTAKE_COUNTS_PER_REVOLUTION));
         // Update data
         telemetry.update();
     }
@@ -265,6 +279,9 @@ public class Slingshotter extends OpMode
         driver();
         operator();
         telecom();
+
+        gpDriver_previous.copy(gpDriver);
+        gpOperator_previous.copy(gpOperator);
     }
 
 }
