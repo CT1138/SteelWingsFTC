@@ -8,6 +8,9 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 public class Mecanum {
     private double mdDefaultSpeed;
 
+    public Mecanum() {
+        mdDefaultSpeed = 1.0;
+    }
     public Mecanum(double adDefaultSpeed) {
         mdDefaultSpeed = adDefaultSpeed;
     }
@@ -23,7 +26,19 @@ public class Mecanum {
      */
 
     public double[] Calculate(double adDrive, double adStrafe, double adTwist, boolean abBrake) {
-        return new double[]{0, 0, 0, 0};
+        double mbFrontLeft = 0.0;
+        double mbFrontRight = 0.0;
+        double mbRearLeft = 0.0;
+        double mbRearRight = 0.0;
+
+        // Calculate Powers
+        mbFrontLeft = adDrive + adStrafe + adTwist * (abBrake ? 1 : mdDefaultSpeed);
+        mbFrontRight = adDrive - adStrafe - adTwist * (abBrake ? 1 : mdDefaultSpeed);
+        mbRearLeft = adDrive - adStrafe + adTwist * (abBrake ? 1 : mdDefaultSpeed);
+        mbRearRight = adDrive + adStrafe - adTwist * (abBrake ? 1 : mdDefaultSpeed);
+
+        // Return Powers
+        return new double[]{mbFrontLeft, mbFrontRight, mbRearLeft, mbRearRight};
     }
     public double[] Calculate(double adDrive, double adStrafe, double adTwist) {
         double mbFrontLeft = 0.0;
