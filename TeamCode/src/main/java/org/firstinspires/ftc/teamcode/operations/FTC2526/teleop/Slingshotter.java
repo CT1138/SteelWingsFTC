@@ -42,6 +42,8 @@ public class Slingshotter extends OpMode
 
         // CONSTANTS
         private final double    DRIVE_BASE_SPEED = 0.8;
+        private final double    TWIST_BASE_SPEED = 1;
+        private final double STRAFE_BASE_SPEED = 0.5;
         private final int       DRIVE_MAX_RPM = 5500;
         private final double    DRIVE_SLIP_THRESHOLD = 1.2;
         private final int       FLYWHEEL_MAX_RPM = 4500;
@@ -180,6 +182,9 @@ public class Slingshotter extends OpMode
         // Flywheel
         flywheelVelocity = flywheel ? flywheelVelocities[1] : flywheelVelocities[0];
         flywheelActive = flywheelVelocity > 0;
+        if (flywheelActive) {
+            gpOperator.rumble(250);
+        }
 
         // Intake
         intakeVelocity = (intake || loadSensor.isPressed()) ? intakeVelocities[1] : intakeVelocities[0];
@@ -188,10 +193,6 @@ public class Slingshotter extends OpMode
         // Stopper
         stopperPosition = stopper ? stopperPositions[1] : stopperPositions[0];
         //stopperPosition = gamepad2.left_stick_y;
-
-        if (flywheelVelocity > 0) {
-            gpOperator.rumble(250);
-        }
 
         // --- Apply outputs ---
         auxFlywheel.setVelocity(flywheelVelocity);
@@ -235,15 +236,14 @@ public class Slingshotter extends OpMode
         return powers;
     }
 
-    private void driver(double drive, double strafe, double twist) {
-        double modifier = DRIVE_BASE_SPEED
-                + (CONTROL_GAS * (1 - DRIVE_BASE_SPEED))
-                - (CONTROL_BRAKE * DRIVE_BASE_SPEED);
-
-        modifier = Math.max(0, Math.min(1, modifier));
-        drive *= modifier;
-        strafe *= modifier;
-        twist *= modifier;
+    private double drivePedals(double BASE_SPEED, double GAS, double BRAKE) {
+        double newSpeed = BASE_SPEED + (GAS * (1 - BASE_SPEED)) - (BRAKE * BASE_SPEED);
+        return Math.max(0, Math.min(1, newSpeed));
+    }
+    private void driver(double drive, double strafe, double twist, double gas, double brake) {
+        drive *= this.drivePedals(DRIVE_BASE_SPEED, gas, brake);
+        strafe *= this.drivePedals(STRAFE_BASE_SPEED, gas, brake);
+        twist *= this.drivePedals(TWIST_BASE_SPEED, gas, brake);
 
         double[] wheelPower = this.tractionControl(mecanum.Calculate(drive, strafe, twist), DRIVE_SLIP_THRESHOLD);
 
@@ -317,7 +317,7 @@ public class Slingshotter extends OpMode
     // =============================================================================================
 
         // Robot Actions
-        this.driver(CONTROL_DRIVE, CONTROL_STRAFE, CONTROL_TWIST);
+        this.driver(CONTROL_DRIVE, CONTROL_STRAFE, CONTROL_TWIST, CONTROL_GAS, CONTROL_BRAKE);
         this.operator(CONTROL_FLYWHEEL, CONTROL_INTAKE, CONTROL_STOPPER);
 
         // Telemetry
