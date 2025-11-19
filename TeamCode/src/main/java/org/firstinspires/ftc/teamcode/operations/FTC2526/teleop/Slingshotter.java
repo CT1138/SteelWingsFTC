@@ -41,6 +41,9 @@ public class Slingshotter extends OpMode
         // END PIDF SETTINGS
 
         // CONSTANTS
+        private final double    DEADZONE_TRIGGER_BUTTON = 0.5;
+        private final double    DEADZONE_STICK = 0.05;
+        private final double    OPERATOR_DRIVE_MODIFIER = 0.5;
         private final double    DRIVE_BASE_SPEED = 0.8;
         private final double    TWIST_BASE_SPEED = 0.5;
         private final double    STRAFE_BASE_SPEED = 0.5;
@@ -73,14 +76,20 @@ public class Slingshotter extends OpMode
     private double    CONTROL_DRIVE;
     private double    CONTROL_STRAFE;
     private double    CONTROL_TWIST;
+    private boolean   CONTROL_HALF_SPEED;
+    private boolean   CONTROL_FULL_SPEED;
     private double    CONTROL_GAS;
     private double    CONTROL_BRAKE;
+    private boolean   CONTROL_DPAD_STRAFE_LEFT;
+    private boolean   CONTROL_DPAD_STRAFE_RIGHT;
+
     private boolean   CONTROL_FLYWHEEL;
     private boolean   CONTROL_INTAKE;
     private double    CONTROL_INTAKE_VARIABLE;
     private boolean   CONTROL_STOPPER;
     private boolean   CONTROL_LOADER;
-    private boolean   flywheelActive;
+    private double    CONTROL_OPERATOR_DRIVE;
+    private double    CONTROL_OPERATOR_TWIST;
 
     private final double[] flywheelVelocities = { 0, this.rpmToVelocity(FLYWHEEL_MAX_RPM, FLYWHEEL_COUNTS_PER_REVOLUTION) };
     private final double[] intakeVelocities = { 0, this.rpmToVelocity(INTAKE_MAX_RPM, INTAKE_COUNTS_PER_REVOLUTION) };
@@ -99,7 +108,6 @@ public class Slingshotter extends OpMode
     private DcMotorEx       auxIntake = null;
     private Servo           auxStopper = null;
     private Servo           auxLoader   = null;
-    private TouchSensor     loadSensor = null;
 
     //============================================================================================
     // END VARIABLES
@@ -118,6 +126,9 @@ public class Slingshotter extends OpMode
 
     private double velocityToRPM(double Velocity, int countsPerRevolution) {
         return ( Velocity / countsPerRevolution ) * 60;
+    }
+    private double deadzone(double input, double threshold) {
+        return Math.abs(input) < threshold ? 0 : input;
     }
     // =============================================================================================
     // END HELPER METHODS
@@ -155,7 +166,6 @@ public class Slingshotter extends OpMode
         auxFlywheel.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, FLYWHEEL_PIDF);
         auxFlywheel.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
 
-        loadSensor = hardwareMap.get(TouchSensor.class, "LoadSensor");
         auxStopper = hardwareMap.get(Servo.class, "Stopper");
         auxLoader  = hardwareMap.get(Servo.class, "Loader");
 
@@ -181,7 +191,7 @@ public class Slingshotter extends OpMode
     // =============================================================================================
     // OPERATOR METHODS
     // =============================================================================================
-    private void operator(boolean flywheel, boolean intake, boolean stopper, boolean loader, double intake_variable) {
+    private void operator() {
         // Initial Powers
         double flywheelVelocity = 0;
         double stopperPosition = 0;
@@ -189,27 +199,26 @@ public class Slingshotter extends OpMode
         double intakeVelocity = 0;
 
         // Flywheel
-        flywheelVelocity = flywheel ? flywheelVelocities[1] : flywheelVelocities[0];
-        flywheelActive = flywheelVelocity > 0;
-
+        flywheelVelocity = CONTROL_FLYWHEEL ? flywheelVelocities[1] : flywheelVelocities[0];
         // Intake
-        if (Math.abs(intake_variable) > 0.1) {
-            intakeVelocity = (intakeVelocities[1] * -intake_variable) * 0.5;
+        if (Math.abs(CONTROL_INTAKE_VARIABLE) > 0.1) {
+            intakeVelocity = (intakeVelocities[1] * -CONTROL_INTAKE_VARIABLE) * 0.5;
         }
 
-        if (flywheel && auxFlywheel.getVelocity() >= 2000 || intake) {
+        if (CONTROL_FLYWHEEL && auxFlywheel.getVelocity() >= 2000 || CONTROL_INTAKE) {
             intakeVelocity = intakeVelocities[1];
         }
 
-        // Stopper
-        stopperPosition = stopper ? stopperPositions[1] : stopperPositions[0];
-        loaderPosition = loader ? loaderPositions[1] : loaderPositions[0];
+        // Servos
+        stopperPosition = CONTROL_STOPPER ? stopperPositions[1] : stopperPositions[0];
+        loaderPosition = CONTROL_LOADER ? loaderPositions[1] : loaderPositions[0];
 
+        // Feedback
         if (flywheelVelocity > 0) {
             gpOperator.rumble(250);
         }
 
-        // --- Apply outputs ---
+        // Apply outputs
         auxFlywheel.setVelocity(flywheelVelocity);
         auxIntake.setVelocity(intakeVelocity);
         auxStopper.setPosition(stopperPosition);
@@ -225,7 +234,7 @@ public class Slingshotter extends OpMode
     private double getHeading() {
         return imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES);
     }
-    // Traction Control system
+
     private double[] tractionControl(double[] powers, double slipThreshold) {
         double[] velocities = new double[4];
         velocities[0] = driveFL.getVelocity();
@@ -239,8 +248,6 @@ public class Slingshotter extends OpMode
         // Loop through each value and calculate how much to reduce its power
         for (int i = 0; i < 4; i++) {
             if (avgVelocity > 50 && velocities[i] > avgVelocity * slipThreshold) {
-                gpDriver.rumble(250);
-
                 double slipRatio = velocities[i] / avgVelocity;
                 double reduction = Math.min(0.5, (slipRatio - 1.0) * 0.5);
 
@@ -255,11 +262,16 @@ public class Slingshotter extends OpMode
 
     private double driveModifier(double gas, double brake, double base) {
         double modifier = base + (gas * (1 - base)) - (brake * base);
+
+        if (CONTROL_FULL_SPEED) return 1;
+        if (CONTROL_HALF_SPEED) return 0.5;
         return Math.max(0, Math.min(1, modifier));
     }
 
-    private void driver(double drive, double strafe, double twist) {
-        //if (!mode) strafe = 0;
+    private void driver() {
+        double drive = CONTROL_DRIVE;
+        double strafe = CONTROL_STRAFE;
+        double twist = CONTROL_TWIST;
 
         drive *= this.driveModifier(CONTROL_GAS, CONTROL_BRAKE, DRIVE_BASE_SPEED);
         strafe *= this.driveModifier(CONTROL_GAS, CONTROL_BRAKE, STRAFE_BASE_SPEED);
@@ -296,7 +308,7 @@ public class Slingshotter extends OpMode
         telemetry.addLine("========================");
     }
     private void telecom() {
-        telemetry.addData("Calculated Heading:", getHeading());
+        telemetry.addData("Calculated Heading:", this.getHeading());
         this.printMotorTelemetry("Front Left", driveFL, DcMotor.RunMode.RUN_USING_ENCODER, DRIVE_COUNTS_PER_REVOLUTION);
         this.printMotorTelemetry("Front Right", driveFR, DcMotor.RunMode.RUN_USING_ENCODER, DRIVE_COUNTS_PER_REVOLUTION);
         this.printMotorTelemetry("Rear Left", driveRL, DcMotor.RunMode.RUN_USING_ENCODER, DRIVE_COUNTS_PER_REVOLUTION);
@@ -323,30 +335,51 @@ public class Slingshotter extends OpMode
     // =============================================================================================
     // CONTROLS
     // =============================================================================================
-        CONTROL_DRIVE = gpDriver.right_stick_y;
-        CONTROL_STRAFE = -gpDriver.left_stick_x;
-        CONTROL_TWIST = -gpDriver.right_stick_x + gpOperator.right_stick_x;
-        CONTROL_GAS = gpDriver.right_trigger;
-        CONTROL_BRAKE = gpDriver.left_trigger;
+        // DRIVER
+        CONTROL_DRIVE  = this.deadzone(gpDriver.right_stick_y, DEADZONE_STICK);
+        CONTROL_STRAFE = this.deadzone(-gpDriver.left_stick_x, DEADZONE_STICK);
+        CONTROL_TWIST  = this.deadzone(-gpDriver.right_stick_x, DEADZONE_STICK);
+        CONTROL_FULL_SPEED = gpDriver.right_bumper || gpDriver.dpad_up;
+        CONTROL_HALF_SPEED = gpDriver.left_bumper || gpDriver.dpad_down;
+        CONTROL_GAS   = gpDriver.a ? 1 : gpDriver.right_trigger;
+        CONTROL_BRAKE = gpDriver.y ? 1 : gpDriver.left_trigger;
+        CONTROL_DPAD_STRAFE_LEFT = gpDriver.dpad_left;
+        CONTROL_DPAD_STRAFE_RIGHT = gpDriver.dpad_right;
 
+
+        // OPERATOR
+        CONTROL_OPERATOR_DRIVE = this.deadzone(gpOperator.right_stick_y, DEADZONE_STICK) * OPERATOR_DRIVE_MODIFIER;
+        CONTROL_OPERATOR_TWIST = this.deadzone(-gpOperator.right_stick_x, DEADZONE_STICK) * OPERATOR_DRIVE_MODIFIER;
         CONTROL_FLYWHEEL = gpOperator.right_bumper
                             || gpOperator.a
-                            || Math.abs(gpOperator.right_trigger) > 0.5
+                            || Math.abs(gpOperator.right_trigger) > DEADZONE_TRIGGER_BUTTON
         ;
         CONTROL_INTAKE =    gpOperator.left_bumper
                             || gpOperator.y
-                            || Math.abs(gpOperator.left_trigger) > 0.5
+                            || Math.abs(gpOperator.left_trigger) > DEADZONE_TRIGGER_BUTTON
         ;
         CONTROL_INTAKE_VARIABLE = gpOperator.left_stick_y;
         CONTROL_STOPPER = gpOperator.dpad_right || gpOperator.x;
         CONTROL_LOADER = gpOperator.dpad_left || gpOperator.b;
+
+        //===================
+        // LEAVE THESE ALONE
+        //===================
+        if (CONTROL_DRIVE == 0 && CONTROL_STRAFE == 0 && CONTROL_TWIST == 0) {
+            CONTROL_DRIVE = CONTROL_OPERATOR_DRIVE;
+            CONTROL_TWIST = CONTROL_OPERATOR_TWIST;
+        }
+
+        CONTROL_DRIVE = Math.max(-1, Math.min(1, CONTROL_DRIVE));
+        CONTROL_STRAFE = Math.max(-1, Math.min(1, CONTROL_STRAFE));
+        CONTROL_TWIST = Math.max(-1, Math.min(1, CONTROL_TWIST));
     // =============================================================================================
     // END CONTROLS
     // =============================================================================================
 
         // Robot Actions
-        this.driver(CONTROL_DRIVE, CONTROL_STRAFE, CONTROL_TWIST);
-        this.operator(CONTROL_FLYWHEEL, CONTROL_INTAKE, CONTROL_STOPPER, CONTROL_LOADER, CONTROL_INTAKE_VARIABLE);
+        this.driver();
+        this.operator();
 
         // Telemetry
         this.telecom();
@@ -356,5 +389,4 @@ public class Slingshotter extends OpMode
         gpDriver_previous.copy(gpDriver);
         gpOperator_previous.copy(gpOperator);
     }
-
 }
