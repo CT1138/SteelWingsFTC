@@ -36,25 +36,33 @@ public class Slingshotter extends OpMode
             // D*: how strongly the controller reacts to the rate of change of the error (helps reduce overshoot and oscillation)
             // F:  provides a baseline output to reach a target speed or position without error
         private final PIDFCoefficients DRIVE_PIDF = new PIDFCoefficients(10.0, 3.0, 0.0, 0.0);
-        private final PIDFCoefficients FLYWHEEL_PIDF = new PIDFCoefficients(20.0, 8.0, 0.0, 0.0);
-        private final PIDFCoefficients INTAKE_PIDF = new PIDFCoefficients(5.0, 3.0, 0.0, 0.0);
+        private final PIDFCoefficients FLYWHEEL_PIDF = new PIDFCoefficients(10.0, 3.0, 0.0, 0.0);
+        private final PIDFCoefficients INTAKE_PIDF = new PIDFCoefficients(10.0, 3.0, 0.0, 0.0);
         // END PIDF SETTINGS
 
         // CONSTANTS
         private final double    DRIVE_BASE_SPEED = 0.8;
+<<<<<<< Updated upstream
         private final double    TWIST_BASE_SPEED = 1;
         private final double STRAFE_BASE_SPEED = 0.5;
+=======
+        private final double    DRIVE_TURN_SPEED = 0.5;
+        private final double    DRIVE_STRAFE_SPEED = 0.5;
+>>>>>>> Stashed changes
         private final int       DRIVE_MAX_RPM = 5500;
         private final double    DRIVE_SLIP_THRESHOLD = 1.2;
-        private final int       FLYWHEEL_MAX_RPM = 4500;
-        private final int       INTAKE_MAX_RPM = 120;
+        private final int       FLYWHEEL_MAX_RPM = 5000;
+        private final int       INTAKE_MAX_RPM = 5500;
 
-        private final double    STOPPER_OPEN_POSITION = 0.6;
-        private final double    STOPPER_CLOSED_POSITION = 0.25;
+        private final double    STOPPER_OPEN_POSITION = 0.5;
+        private final double    STOPPER_CLOSED_POSITION = 0.8;
+
+        private final double    LOADER_OPEN_POSITION = 0.2;
+        private final double    LOADER_CLOSED_POSITION = 0.45;
 
         private final int       DRIVE_COUNTS_PER_REVOLUTION = 28;
         private final int       FLYWHEEL_COUNTS_PER_REVOLUTION = 28;
-        private final int       INTAKE_COUNTS_PER_REVOLUTION = 288;
+        private final int       INTAKE_COUNTS_PER_REVOLUTION = 28;
 
         private final LogoFacingDirection CONTROL_LOGO_DIRECTION = LogoFacingDirection.RIGHT;
         private final UsbFacingDirection CONTROL_USB_DIRECTION = UsbFacingDirection.UP;
@@ -67,20 +75,21 @@ public class Slingshotter extends OpMode
     private Gamepad gpOperator_previous;
 
     private double    CONTROL_DRIVE;
-    private int       CONTROL_STRAFE_LEFT;
-    private int       CONTROL_STRAFE_RIGHT;
     private double    CONTROL_STRAFE;
     private double    CONTROL_TWIST;
     private double    CONTROL_GAS;
     private double    CONTROL_BRAKE;
     private boolean   CONTROL_FLYWHEEL;
     private boolean   CONTROL_INTAKE;
+    private double    CONTROL_INTAKE_VARIABLE;
     private boolean   CONTROL_STOPPER;
+    private boolean   CONTROL_LOADER;
     private boolean   flywheelActive;
 
     private final double[] flywheelVelocities = { 0, this.rpmToVelocity(FLYWHEEL_MAX_RPM, FLYWHEEL_COUNTS_PER_REVOLUTION) };
     private final double[] intakeVelocities = { 0, this.rpmToVelocity(INTAKE_MAX_RPM, INTAKE_COUNTS_PER_REVOLUTION) };
     private final double[] stopperPositions = { STOPPER_CLOSED_POSITION, STOPPER_OPEN_POSITION };
+    private final double[] loaderPositions = {LOADER_CLOSED_POSITION, LOADER_OPEN_POSITION};
 
     private Mecanum         mecanum;
     private IMU             imu;
@@ -93,6 +102,7 @@ public class Slingshotter extends OpMode
     private DcMotorEx       auxFlywheel = null;
     private DcMotorEx       auxIntake = null;
     private Servo           auxStopper = null;
+    private Servo           auxLoader   = null;
     private TouchSensor     loadSensor = null;
 
     //============================================================================================
@@ -142,6 +152,7 @@ public class Slingshotter extends OpMode
         auxIntake.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         auxIntake.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, INTAKE_PIDF);
         auxIntake.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        auxIntake.setDirection(DcMotorSimple.Direction.REVERSE);
 
         auxFlywheel = hardwareMap.get(DcMotorEx.class, "Flywheel");
         auxFlywheel.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
@@ -150,6 +161,7 @@ public class Slingshotter extends OpMode
 
         loadSensor = hardwareMap.get(TouchSensor.class, "LoadSensor");
         auxStopper = hardwareMap.get(Servo.class, "Stopper");
+        auxLoader  = hardwareMap.get(Servo.class, "Loader");
 
         // IMU Initialization
         imu = hardwareMap.get(IMU.class, "imu");
@@ -173,10 +185,11 @@ public class Slingshotter extends OpMode
     // =============================================================================================
     // OPERATOR METHODS
     // =============================================================================================
-    private void operator(boolean flywheel, boolean intake, boolean stopper) {
+    private void operator(boolean flywheel, boolean intake, boolean stopper, boolean loader, double intake_variable) {
         // Initial Powers
         double flywheelVelocity = 0;
         double stopperPosition = 0;
+        double loaderPosition = 0;
         double intakeVelocity = 0;
 
         // Flywheel
@@ -186,18 +199,26 @@ public class Slingshotter extends OpMode
             gpOperator.rumble(250);
         }
 
+        System.out.println(intake_variable);
+
         // Intake
-        intakeVelocity = (intake || loadSensor.isPressed()) ? intakeVelocities[1] : intakeVelocities[0];
-        // if (flywheelActive) intakeVelocity = 0;
+        if (Math.abs(intake_variable) > 0.1) {
+            intakeVelocity = (intakeVelocities[1] * -intake_variable) * 0.5;
+        }
+
+        if (flywheel && auxFlywheel.getVelocity() >= 2000 || intake) {
+            intakeVelocity = intakeVelocities[1];
+        }
 
         // Stopper
         stopperPosition = stopper ? stopperPositions[1] : stopperPositions[0];
-        //stopperPosition = gamepad2.left_stick_y;
+        loaderPosition = loader ? loaderPositions[1] : loaderPositions[0];
 
         // --- Apply outputs ---
         auxFlywheel.setVelocity(flywheelVelocity);
         auxIntake.setVelocity(intakeVelocity);
         auxStopper.setPosition(stopperPosition);
+        auxLoader.setPosition(loaderPosition);
     }
     // =============================================================================================
     // END OPERATOR METHODS
@@ -236,6 +257,7 @@ public class Slingshotter extends OpMode
         return powers;
     }
 
+<<<<<<< Updated upstream
     private double drivePedals(double BASE_SPEED, double GAS, double BRAKE) {
         double newSpeed = BASE_SPEED + (GAS * (1 - BASE_SPEED)) - (BRAKE * BASE_SPEED);
         return Math.max(0, Math.min(1, newSpeed));
@@ -244,6 +266,19 @@ public class Slingshotter extends OpMode
         drive *= this.drivePedals(DRIVE_BASE_SPEED, gas, brake);
         strafe *= this.drivePedals(STRAFE_BASE_SPEED, gas, brake);
         twist *= this.drivePedals(TWIST_BASE_SPEED, gas, brake);
+=======
+    private double driveModifier(double gas, double brake, double base) {
+        double modifier = base + (gas * (1 - base)) - (brake * base);
+        return Math.max(0, Math.min(1, modifier));
+    }
+
+    private void driver(double drive, double strafe, double twist) {
+        //if (!mode) strafe = 0;
+
+        drive *= this.driveModifier(CONTROL_GAS, CONTROL_BRAKE, DRIVE_BASE_SPEED);
+        strafe *= this.driveModifier(CONTROL_GAS, CONTROL_BRAKE, DRIVE_STRAFE_SPEED);
+        twist *= this.driveModifier(CONTROL_GAS, CONTROL_BRAKE, DRIVE_TURN_SPEED);
+>>>>>>> Stashed changes
 
         double[] wheelPower = this.tractionControl(mecanum.Calculate(drive, strafe, twist), DRIVE_SLIP_THRESHOLD);
 
@@ -282,6 +317,7 @@ public class Slingshotter extends OpMode
         this.printMotorTelemetry("Rear Left", driveRL, DcMotor.RunMode.RUN_USING_ENCODER, DRIVE_COUNTS_PER_REVOLUTION);
         this.printMotorTelemetry("Rear Right", driveRR, DcMotor.RunMode.RUN_USING_ENCODER, DRIVE_COUNTS_PER_REVOLUTION);
         telemetry.addData("Stopper Position", auxStopper.getPosition());
+        telemetry.addData("Loader Position", auxLoader.getPosition());
         this.printMotorTelemetry("Intake", auxIntake, DcMotor.RunMode.RUN_USING_ENCODER, INTAKE_COUNTS_PER_REVOLUTION);
         this.printMotorTelemetry("Flywheel", auxFlywheel, DcMotor.RunMode.RUN_USING_ENCODER, FLYWHEEL_COUNTS_PER_REVOLUTION);
         // Update data
@@ -303,22 +339,34 @@ public class Slingshotter extends OpMode
     // CONTROLS
     // =============================================================================================
         CONTROL_DRIVE = gpDriver.right_stick_y;
-        CONTROL_STRAFE = -gpDriver.left_stick_x + (CONTROL_STRAFE_LEFT - CONTROL_STRAFE_RIGHT);
-            CONTROL_STRAFE_LEFT = gpDriver.left_bumper ? 1 : 0;
-            CONTROL_STRAFE_RIGHT = gpDriver.right_bumper ? 1 : 0;
-        CONTROL_TWIST = -gpDriver.right_stick_x;
+        CONTROL_STRAFE = -gpDriver.left_stick_x;
+        CONTROL_TWIST = -gpDriver.right_stick_x + gpOperator.right_stick_x;
         CONTROL_GAS = gpDriver.right_trigger;
         CONTROL_BRAKE = gpDriver.left_trigger;
-        CONTROL_FLYWHEEL = gpOperator.left_bumper || gpOperator.a;
-        CONTROL_INTAKE = gpOperator.dpad_up;
-        CONTROL_STOPPER = gpOperator.right_bumper || gpOperator.y;
+
+        CONTROL_FLYWHEEL = gpOperator.right_bumper
+                            || gpOperator.a
+                            || Math.abs(gpOperator.right_trigger) > 0.5
+        ;
+        CONTROL_INTAKE =    gpOperator.left_bumper
+                            || gpOperator.y
+                            || Math.abs(gpOperator.left_trigger) > 0.5
+        ;
+        CONTROL_INTAKE_VARIABLE = gpOperator.left_stick_y;
+        CONTROL_STOPPER = gpOperator.dpad_right || gpOperator.x;
+        CONTROL_LOADER = gpOperator.dpad_left || gpOperator.b;
     // =============================================================================================
     // END CONTROLS
     // =============================================================================================
 
         // Robot Actions
+<<<<<<< Updated upstream
         this.driver(CONTROL_DRIVE, CONTROL_STRAFE, CONTROL_TWIST, CONTROL_GAS, CONTROL_BRAKE);
         this.operator(CONTROL_FLYWHEEL, CONTROL_INTAKE, CONTROL_STOPPER);
+=======
+        this.driver(CONTROL_DRIVE, CONTROL_STRAFE, CONTROL_TWIST);
+        this.operator(CONTROL_FLYWHEEL, CONTROL_INTAKE, CONTROL_STOPPER, CONTROL_LOADER, CONTROL_INTAKE_VARIABLE);
+>>>>>>> Stashed changes
 
         // Telemetry
         this.telecom();
