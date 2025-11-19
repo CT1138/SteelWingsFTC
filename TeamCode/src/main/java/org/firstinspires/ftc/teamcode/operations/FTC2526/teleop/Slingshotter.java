@@ -42,18 +42,9 @@ public class Slingshotter extends OpMode
 
         // CONSTANTS
         private final double    DRIVE_BASE_SPEED = 0.8;
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-        private final double    TWIST_BASE_SPEED = 1;
-        private final double STRAFE_BASE_SPEED = 0.5;
-=======
-        private final double    DRIVE_TURN_SPEED = 0.5;
-        private final double    DRIVE_STRAFE_SPEED = 0.5;
->>>>>>> Stashed changes
-=======
-        private final double    DRIVE_TURN_SPEED = 0.5;
-        private final double    DRIVE_STRAFE_SPEED = 0.5;
->>>>>>> Stashed changes
+        private final double    TWIST_BASE_SPEED = 0.5;
+        private final double    STRAFE_BASE_SPEED = 0.5;
+
         private final int       DRIVE_MAX_RPM = 5500;
         private final double    DRIVE_SLIP_THRESHOLD = 1.2;
         private final int       FLYWHEEL_MAX_RPM = 5000;
@@ -200,13 +191,6 @@ public class Slingshotter extends OpMode
         // Flywheel
         flywheelVelocity = flywheel ? flywheelVelocities[1] : flywheelVelocities[0];
         flywheelActive = flywheelVelocity > 0;
-        if (flywheelActive) {
-            gpOperator.rumble(250);
-        }
-
-        System.out.println(intake_variable);
-
-        System.out.println(intake_variable);
 
         // Intake
         if (Math.abs(intake_variable) > 0.1) {
@@ -220,13 +204,10 @@ public class Slingshotter extends OpMode
         // Stopper
         stopperPosition = stopper ? stopperPositions[1] : stopperPositions[0];
         loaderPosition = loader ? loaderPositions[1] : loaderPositions[0];
-<<<<<<< Updated upstream
-=======
 
         if (flywheelVelocity > 0) {
             gpOperator.rumble(250);
         }
->>>>>>> Stashed changes
 
         // --- Apply outputs ---
         auxFlywheel.setVelocity(flywheelVelocity);
@@ -271,19 +252,7 @@ public class Slingshotter extends OpMode
         return powers;
     }
 
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-    private double drivePedals(double BASE_SPEED, double GAS, double BRAKE) {
-        double newSpeed = BASE_SPEED + (GAS * (1 - BASE_SPEED)) - (BRAKE * BASE_SPEED);
-        return Math.max(0, Math.min(1, newSpeed));
-    }
-    private void driver(double drive, double strafe, double twist, double gas, double brake) {
-        drive *= this.drivePedals(DRIVE_BASE_SPEED, gas, brake);
-        strafe *= this.drivePedals(STRAFE_BASE_SPEED, gas, brake);
-        twist *= this.drivePedals(TWIST_BASE_SPEED, gas, brake);
-=======
-=======
->>>>>>> Stashed changes
+
     private double driveModifier(double gas, double brake, double base) {
         double modifier = base + (gas * (1 - base)) - (brake * base);
         return Math.max(0, Math.min(1, modifier));
@@ -293,12 +262,8 @@ public class Slingshotter extends OpMode
         //if (!mode) strafe = 0;
 
         drive *= this.driveModifier(CONTROL_GAS, CONTROL_BRAKE, DRIVE_BASE_SPEED);
-        strafe *= this.driveModifier(CONTROL_GAS, CONTROL_BRAKE, DRIVE_STRAFE_SPEED);
-        twist *= this.driveModifier(CONTROL_GAS, CONTROL_BRAKE, DRIVE_TURN_SPEED);
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
+        strafe *= this.driveModifier(CONTROL_GAS, CONTROL_BRAKE, STRAFE_BASE_SPEED);
+        twist *= this.driveModifier(CONTROL_GAS, CONTROL_BRAKE, TWIST_BASE_SPEED);
 
         double[] wheelPower = this.tractionControl(mecanum.Calculate(drive, strafe, twist), DRIVE_SLIP_THRESHOLD);
 
@@ -380,18 +345,8 @@ public class Slingshotter extends OpMode
     // =============================================================================================
 
         // Robot Actions
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-        this.driver(CONTROL_DRIVE, CONTROL_STRAFE, CONTROL_TWIST, CONTROL_GAS, CONTROL_BRAKE);
-        this.operator(CONTROL_FLYWHEEL, CONTROL_INTAKE, CONTROL_STOPPER);
-=======
         this.driver(CONTROL_DRIVE, CONTROL_STRAFE, CONTROL_TWIST);
         this.operator(CONTROL_FLYWHEEL, CONTROL_INTAKE, CONTROL_STOPPER, CONTROL_LOADER, CONTROL_INTAKE_VARIABLE);
->>>>>>> Stashed changes
-=======
-        this.driver(CONTROL_DRIVE, CONTROL_STRAFE, CONTROL_TWIST);
-        this.operator(CONTROL_FLYWHEEL, CONTROL_INTAKE, CONTROL_STOPPER, CONTROL_LOADER, CONTROL_INTAKE_VARIABLE);
->>>>>>> Stashed changes
 
         // Telemetry
         this.telecom();
