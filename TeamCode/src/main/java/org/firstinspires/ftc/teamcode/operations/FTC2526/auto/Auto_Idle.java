@@ -17,13 +17,15 @@ public class Auto_Idle extends OpMode
     private Mecanum moMecanum = new Mecanum(0.7);
 
     // Actuators
+    public final double    LOADER_OPEN_POSITION = 0.3;
+    public final double    LOADER_CLOSED_POSITION = 0.45;
+
     private final double[] stopperPositions = {0.5, 0};
-    private final double[] intakePowers = {0, 1, 0.5};
+    private final double[] intakePowers = {0, 1, 1};
     private DcMotorEx moDrive_FrontLeft = null;
     private DcMotorEx moDrive_FrontRight = null;
     private DcMotorEx moDrive_RearLeft = null;
     private DcMotorEx moDrive_RearRight = null;
-    private DcMotorEx moAux_Intake = null;
     private Servo soAux_Stopper = null;
 
     // throws IOException as some utility classes I wrote require file operations
@@ -39,8 +41,7 @@ public class Auto_Idle extends OpMode
         moDrive_RearLeft = hardwareMap.get(DcMotorEx.class, "RL");
         moDrive_RearRight = hardwareMap.get(DcMotorEx.class, "RR");
 
-        moAux_Intake = hardwareMap.get(DcMotorEx.class, "Intake");
-        soAux_Stopper = hardwareMap.get(Servo.class, "Stopper");
+        soAux_Stopper = hardwareMap.get(Servo.class, "Loader");
 
         moDrive_FrontLeft.setDirection(DcMotorSimple.Direction.FORWARD);
         moDrive_FrontRight.setDirection(DcMotorSimple.Direction.REVERSE);
@@ -57,6 +58,7 @@ public class Auto_Idle extends OpMode
         moDrive_RearRight.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         moDrive_RearLeft.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
+        soAux_Stopper.setPosition(LOADER_CLOSED_POSITION);
     }
 
     public double[] tractionControl(double[] powers, double[] velocities, double slipThreshold) {
@@ -82,7 +84,6 @@ public class Auto_Idle extends OpMode
     @Override
     public void start() {
        soAux_Stopper.setPosition(stopperPositions[0]);
-       moAux_Intake.setPower(intakePowers[2]);
     }
 
     // Method to store telemetry data

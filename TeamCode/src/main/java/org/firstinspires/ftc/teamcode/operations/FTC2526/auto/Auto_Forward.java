@@ -65,11 +65,10 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 
 @Autonomous(name="Forward 24 inches", group="Decode")
 public class Auto_Forward extends LinearOpMode {
-
-    private final double[] stopperPositions = {0.5, 0};
-    private final double[] intakePowers = {0, 1, 0.5};
-    private DcMotorEx moAux_Intake = null;
     private Servo soAux_Stopper = null;
+
+    public final double    LOADER_OPEN_POSITION = 0.3;
+    public final double    LOADER_CLOSED_POSITION = 0.45;
 
     /* Declare OpMode members. */
     private DcMotorEx moDrive_FrontLeft = null;
@@ -90,19 +89,18 @@ public class Auto_Forward extends LinearOpMode {
 
     @Override
     public void runOpMode() {
-        moAux_Intake = hardwareMap.get(DcMotorEx.class, "Intake");
-        soAux_Stopper = hardwareMap.get(Servo.class, "Stopper");
+        soAux_Stopper = hardwareMap.get(Servo.class, "Loader");
 
         moDrive_FrontLeft = hardwareMap.get(DcMotorEx.class, "FL");
         moDrive_FrontRight = hardwareMap.get(DcMotorEx.class, "FR");
         moDrive_RearLeft = hardwareMap.get(DcMotorEx.class, "RL");
         moDrive_RearRight = hardwareMap.get(DcMotorEx.class, "RR");
 
-        moDrive_FrontLeft.setDirection(DcMotorSimple.Direction.FORWARD);
-        moDrive_FrontRight.setDirection(DcMotorSimple.Direction.REVERSE);
-        moDrive_RearLeft.setDirection(DcMotorSimple.Direction.FORWARD);
-        moDrive_RearRight.setDirection(DcMotorSimple.Direction.REVERSE);
-
+        moDrive_FrontLeft.setDirection(DcMotorSimple.Direction.REVERSE);
+        moDrive_FrontRight.setDirection(DcMotorSimple.Direction.FORWARD);
+        moDrive_RearLeft.setDirection(DcMotorSimple.Direction.REVERSE);
+        moDrive_RearRight.setDirection(DcMotorSimple.Direction.FORWARD);
+        soAux_Stopper.setPosition(LOADER_CLOSED_POSITION);
         // Reset encoders
         for (DcMotorEx motor : new DcMotorEx[]{moDrive_FrontLeft, moDrive_FrontRight, moDrive_RearLeft, moDrive_RearRight}) {
             motor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -113,11 +111,10 @@ public class Auto_Forward extends LinearOpMode {
         telemetry.update();
         waitForStart();
 
-        soAux_Stopper.setPosition(stopperPositions[0]);
-        moAux_Intake.setPower(intakePowers[2]);
+        soAux_Stopper.setPosition(LOADER_CLOSED_POSITION);
 
         // Example autonomous routine
-        encoderDrive(DRIVE_SPEED,  24,  24, 5.0);   // Forward
+        encoderDrive(DRIVE_SPEED,  48,  48, 5.0);   // Forward
 
         telemetry.addLine("Path Complete");
         telemetry.update();
