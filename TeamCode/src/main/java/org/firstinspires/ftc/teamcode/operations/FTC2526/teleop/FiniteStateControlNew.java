@@ -13,21 +13,22 @@ public class FiniteStateControlNew extends TeleOPMaster
         IDLE,
         LOAD_AND_SHOOT,
     }
-    public enum ShootSubstate {
-        IDLE(0.0),
-        OPEN_LOADER(0.0),
-        CLOSE_LOADER(0.4),
-        PUSH(0.45),
-        RETRACT(1),
-        DONE(0)
+    enum ShootSubstate {
+        IDLE(0.1),
+        OPEN_LOADER(0.5),
+        CLOSE_LOADER(0.2),
+        PUSH(1.2),
+        RETRACT(0.2),
+        DONE(0.1)
         ;
 
-        public final double startTime;
+        public final double duration;
 
-        ShootSubstate(double startTime) {
-            this.startTime = startTime;
+        ShootSubstate(double duration) {
+            this.duration = duration;
         }
     }
+
 
     //============================================================================================
     // BEGIN VARIABLES
@@ -43,11 +44,11 @@ public class FiniteStateControlNew extends TeleOPMaster
     private ElapsedTime   shootStep = new ElapsedTime();
 
     private OperatorState operatorState = OperatorState.IDLE;
-    private OperatorState nextState = OperatorState.IDLE;
-    private ShootSubstate subState = ShootSubstate.IDLE;
+    private OperatorState nextOperatorState = OperatorState.IDLE;
+    private ShootSubstate operatorSubState = ShootSubstate.IDLE;
 
     private int           ballsShot     = 0;
-    private boolean       enterState = false;
+    private boolean enterOperatorState = false;
     //============================================================================================
     // END VARIABLES
     //============================================================================================
@@ -81,7 +82,7 @@ public class FiniteStateControlNew extends TeleOPMaster
     public void operator() {
         if(cOperator.CANCEL_STATE) {
             operatorState = OperatorState.IDLE;
-            nextState = OperatorState.IDLE;
+            nextOperatorState = OperatorState.IDLE;
         }
 
         // State handler
@@ -102,9 +103,9 @@ public class FiniteStateControlNew extends TeleOPMaster
 
     // Default state
     private int state_idle() {
-        if (!enterState) {
+        if (!enterOperatorState) {
             timeStep.reset();
-            enterState = true;
+            enterOperatorState = true;
         }
 
         loaderPosition = LOADER_CLOSED_POSITION;
@@ -115,9 +116,20 @@ public class FiniteStateControlNew extends TeleOPMaster
         if (cOperator.FLYWHEEL_OFF) flywheelVelocity = FLYWHEEL_MIN_RPM;
 
         // Increase/Decrease flywheel power
+        /*
         if (cOperator.INCREASE_FLYWHEEL_SPEED) flywheelPowerIndex++;
         if (cOperator.DECREASE_FLYWHEEL_SPEED) flywheelPowerIndex--;
         flywheelPowerIndex = Math.max(0, Math.min(flywheelMaxVelocities.length -1, flywheelPowerIndex));
+        */
+
+        if (cOperator.INCREASE_FLYWHEEL_SPEED) {
+            flywheelPowerIndex = 2;
+        }
+        else if (cOperator.DECREASE_FLYWHEEL_SPEED) {
+            flywheelPowerIndex = 0;
+        } else {
+            flywheelPowerIndex = 1;
+        }
 
         // Increase/Decrease number of balls to shoot
         if (cOperator.INCREASE_SHOOTCOUNT) numberToShoot++;
@@ -126,26 +138,24 @@ public class FiniteStateControlNew extends TeleOPMaster
 
         // Queue load and shoot state
         if (cOperator.LOAD_AND_SHOOT) {
-            nextState = OperatorState.LOAD_AND_SHOOT;
+            nextOperatorState = OperatorState.LOAD_AND_SHOOT;
         }
 
         // If queued state is not the current running state, switch states for next cycle
-        if (nextState != operatorState) {
-            operatorState = nextState;
-            enterState = false;
+        if (nextOperatorState != operatorState) {
+            operatorState = nextOperatorState;
+            enterOperatorState = false;
             return 1;
         }
         return 0;
     }
 
-    private int state_load_and_shoot() {
+    public int state_load_and_shoot() {
         int minVelocity = 1980;
-        double time = shootStep.seconds();
-
-        if (!enterState) {
+        if (!enterOperatorState) {
             timeStep.reset();
             shootStep.reset();
-            enterState = true;
+            enterOperatorState = true;
 
             ballsShot = 0;
 
@@ -154,60 +164,67 @@ public class FiniteStateControlNew extends TeleOPMaster
             pusherPosition = PUSHER_CLOSED_POSITION;
             flywheelVelocity = this.rpmToVelocity(flywheelMaxVelocities[flywheelPowerIndex], FLYWHEEL_COUNTS_PER_REVOLUTION);
         }
-
         if (ballsShot < numberToShoot) {
-            telemetry.addData("Shoot State", subState.toString());
-            telemetry.addData("Shooter Time", time);
-            telemetry.addData("State Time", timeStep.seconds());
+            telemetry.addData("Shoot State", operatorSubState.toString());
+            telemetry.addData("State Time", shootStep.seconds());
 
-            switch (subState) {
+            switch (operatorSubState) {
+
                 case IDLE:
-                    if(auxFlywheel.getVelocity() < minVelocity) {
-                        System.out.println("!!! Flywheel under minimum velocity, waiting . . .");
-                        shootStep.reset();
-                        loaderPosition = LOADER_CLOSED_POSITION;
-                        pusherPosition = PUSHER_CLOSED_POSITION;
-                    } else {
+                    // Wait for flywheel to spin up
+                    loaderPosition = LOADER_CLOSED_POSITION;
+                    pusherPosition = PUSHER_CLOSED_POSITION;
+
+                    if (auxFlywheel.getVelocity() >= minVelocity) {
                         System.out.println("!!! Flywheel meets min velocity!");
-                        subState = ShootSubstate.OPEN_LOADER;
+                        operatorSubState = ShootSubstate.OPEN_LOADER;
+                        shootStep.reset(); // reset timer for OPEN_LOADER
                     }
                     break;
 
                 case OPEN_LOADER:
                     loaderPosition = LOADER_OPEN_POSITION;
-                    if (subState.startTime <= time) {
-                        subState = ShootSubstate.CLOSE_LOADER;
-                        shootStep.reset();
+
+                    // Duration of OPEN_LOADER substate
+                    if (shootStep.seconds() >= operatorSubState.duration) { // seconds to keep loader open
+                        operatorSubState = ShootSubstate.CLOSE_LOADER;
+                        shootStep.reset(); // reset timer for CLOSE_LOADER
                     }
                     break;
 
                 case CLOSE_LOADER:
                     loaderPosition = LOADER_CLOSED_POSITION;
-                    if (subState.startTime <= time) {
-                        subState = ShootSubstate.PUSH;
+
+                    // Duration of CLOSE_LOADER substate
+                    if (shootStep.seconds() >= operatorSubState.duration) {
+                        operatorSubState = ShootSubstate.PUSH;
                         shootStep.reset();
                     }
                     break;
 
                 case PUSH:
                     pusherPosition = PUSHER_OPEN_POSITION;
-                    if (subState.startTime <= time) {
-                        subState = ShootSubstate.RETRACT;
+
+                    // Duration of PUSH substate
+                    if (shootStep.seconds() >= operatorSubState.duration) {
+                        operatorSubState = ShootSubstate.RETRACT;
                         shootStep.reset();
                     }
                     break;
 
                 case RETRACT:
                     pusherPosition = PUSHER_CLOSED_POSITION;
-                    if (subState.startTime <= time) {
-                        subState = ShootSubstate.DONE;
+
+                    // Duration of RETRACT substate
+                    if (shootStep.seconds() >= operatorSubState.duration) {
+                        operatorSubState = ShootSubstate.DONE;
                         shootStep.reset();
                     }
                     break;
 
                 case DONE:
                     ballsShot++;
-                    subState = ShootSubstate.IDLE;
+                    operatorSubState = ShootSubstate.IDLE;
                     break;
             }
         }
@@ -217,12 +234,12 @@ public class FiniteStateControlNew extends TeleOPMaster
             loaderPosition = LOADER_CLOSED_POSITION;
             pusherPosition = PUSHER_CLOSED_POSITION;
             flywheelVelocity = FLYWHEEL_MIN_RPM;
-            nextState = OperatorState.IDLE;
+            nextOperatorState = OperatorState.IDLE;
         }
 
-        if (nextState != operatorState) {
-            operatorState = nextState;
-            enterState = false;
+        if (nextOperatorState != operatorState) {
+            operatorState = nextOperatorState;
+            enterOperatorState = false;
             return 1;
         }
         return 0;

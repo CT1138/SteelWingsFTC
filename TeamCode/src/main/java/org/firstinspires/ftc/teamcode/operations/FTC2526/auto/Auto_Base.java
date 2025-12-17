@@ -1,7 +1,5 @@
 package org.firstinspires.ftc.teamcode.operations.FTC2526.auto;
 
-import static org.firstinspires.ftc.robotcore.external.BlocksOpModeCompanion.telemetry;
-
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
@@ -17,7 +15,6 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
 import org.firstinspires.ftc.teamcode.core.util.Mecanum;
-import org.firstinspires.ftc.teamcode.operations.FTC2526.teleop.FiniteStateControlNew;
 
 @Disabled
 @Autonomous(name="Auto - Base", group="Decode")
@@ -33,18 +30,18 @@ public class Auto_Base extends OpMode {
         LOAD_AND_SHOOT,
     }
     enum ShootSubstate {
-        IDLE(0.0),
-        OPEN_LOADER(0.0),
-        CLOSE_LOADER(0.4),
-        PUSH(0.45),
-        RETRACT(1),
-        DONE(0)
+        IDLE(0.1),
+        OPEN_LOADER(0.5),
+        CLOSE_LOADER(0.2),
+        PUSH(1.2),
+        RETRACT(0.2),
+        DONE(0.1)
         ;
 
-        public final double startTime;
+        public final double duration;
 
-        ShootSubstate(double startTime) {
-            this.startTime = startTime;
+        ShootSubstate(double duration) {
+            this.duration = duration;
         }
     }
 
@@ -56,25 +53,29 @@ public class Auto_Base extends OpMode {
     public ElapsedTime   timeStep = new ElapsedTime();
     public ElapsedTime   shootStep = new ElapsedTime();
 
-    public FiniteStateControlNew.OperatorState operatorState = FiniteStateControlNew.OperatorState.IDLE;
-    public FiniteStateControlNew.OperatorState nextState = FiniteStateControlNew.OperatorState.IDLE;
-    public FiniteStateControlNew.ShootSubstate subState = FiniteStateControlNew.ShootSubstate.IDLE;
+    public OperatorState operatorState = OperatorState.IDLE;
+    public OperatorState nextOperatorState = OperatorState.IDLE;
+    public ShootSubstate operatorSubState = ShootSubstate.IDLE;
 
     public int           ballsShot     = 0;
-    public boolean       enterState = false;
-    public boolean       cancelState = false;
+    public boolean enterOperatorState = false;
+    public boolean cancelOperatorState = false;
+    public boolean doneFiring = false;
     public final double    DRIVE_BASE_SPEED = 0.8;
     public final double    TWIST_BASE_SPEED = 0.5;
     public final double    STRAFE_BASE_SPEED = 0.5;
-    public final double    TRACK_WIDTH_INCHES = 12;
+    public final double TRACK_WIDTH_ERROR = (90 / 37);
+    public final double    TRACK_WIDTH_INCHES = 14.25 * TRACK_WIDTH_ERROR;
 
     public final int       DRIVE_COUNTS_PER_REVOLUTION = 28;
     public final int       FLYWHEEL_COUNTS_PER_REVOLUTION = 28;
     public final int       INTAKE_COUNTS_PER_REVOLUTION = 28;
-    public final double DRIVE_GEAR_REDUCTION = 6.67;   // gear ratio
+    public final double DRIVE_GEAR_REDUCTION = 12;   // gear ratio
     public final double WHEEL_DIAMETER_INCHES = 2.95275591; // wheel size
-    public final double COUNTS_PER_INCH = (DRIVE_COUNTS_PER_REVOLUTION * DRIVE_GEAR_REDUCTION) /
-            (WHEEL_DIAMETER_INCHES * 3.1415);
+    public final double COUNTS_PER_INCH_ERROR = 1 - 0.182;
+    public final double COUNTS_PER_INCH = ((DRIVE_COUNTS_PER_REVOLUTION * DRIVE_GEAR_REDUCTION) /
+            (WHEEL_DIAMETER_INCHES * Math.PI)) * COUNTS_PER_INCH_ERROR; //3.1415);
+
     public final int       DRIVE_MAX_RPM = 5500;
     public final double    DRIVE_SLIP_THRESHOLD = 1.2;
 
@@ -151,10 +152,10 @@ public class Auto_Base extends OpMode {
             motor.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, DRIVE_PIDF);
         }
 
-        driveFL.setDirection(DcMotorSimple.Direction.FORWARD);
-        driveFR.setDirection(DcMotorSimple.Direction.REVERSE);
-        driveRL.setDirection(DcMotorSimple.Direction.FORWARD);
-        driveRR.setDirection(DcMotorSimple.Direction.REVERSE);
+        driveFL.setDirection(DcMotorSimple.Direction.REVERSE);
+        driveFR.setDirection(DcMotorSimple.Direction.FORWARD);
+        driveRL.setDirection(DcMotorSimple.Direction.REVERSE);
+        driveRR.setDirection(DcMotorSimple.Direction.FORWARD);
 
         this.auxIntake = hardwareMap.get(DcMotorEx.class, "Intake");
         auxIntake.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
@@ -274,6 +275,146 @@ public class Auto_Base extends OpMode {
         setAllPower(0);
         for (DcMotorEx m : new DcMotorEx[]{driveFL, driveFR, driveRL, driveRR})
             m.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+    }
+
+    // SHOOTER
+    // SHOOTER
+    public void shooterStateMachine() {
+        if(cancelOperatorState) {
+            cancelOperatorState = false;
+            operatorState = OperatorState.IDLE;
+            nextOperatorState = OperatorState.IDLE;
+        }
+
+        // State handler
+        switch (operatorState) {
+            case IDLE:
+                state_idle();
+                break;
+            case LOAD_AND_SHOOT:
+                state_load_and_shoot();
+                break;
+        }
+
+        // Apply positions and powers post-state
+        auxPusher.setPosition(pusherPosition);
+        auxLoader.setPosition(loaderPosition);
+        auxFlywheel.setVelocity(flywheelVelocity);
+    }
+
+    // Default state
+    public int state_idle() {
+        if (!enterOperatorState) {
+            timeStep.reset();
+            enterOperatorState = true;
+        }
+
+        loaderPosition = LOADER_CLOSED_POSITION;
+        pusherPosition = PUSHER_CLOSED_POSITION;
+
+        // If queued state is not the current running state, switch states for next cycle
+        if (nextOperatorState != operatorState) {
+            operatorState = nextOperatorState;
+            enterOperatorState = false;
+            return 1;
+        }
+        return 0;
+    }
+
+    public int state_load_and_shoot() {
+        int minVelocity = 1980;
+        if (!enterOperatorState) {
+            timeStep.reset();
+            shootStep.reset();
+            enterOperatorState = true;
+
+            ballsShot = 0;
+
+            // Always initialize positions
+            loaderPosition = LOADER_CLOSED_POSITION;
+            pusherPosition = PUSHER_CLOSED_POSITION;
+            flywheelVelocity = this.rpmToVelocity(flywheelMaxVelocities[flywheelPowerIndex], FLYWHEEL_COUNTS_PER_REVOLUTION);
+        }
+        if (ballsShot < numberToShoot) {
+            telemetry.addData("Shoot State", operatorSubState.toString());
+            telemetry.addData("State Time", shootStep.seconds());
+
+            switch (operatorSubState) {
+
+                case IDLE:
+                    // Wait for flywheel to spin up
+                    loaderPosition = LOADER_CLOSED_POSITION;
+                    pusherPosition = PUSHER_CLOSED_POSITION;
+
+                    if (auxFlywheel.getVelocity() >= minVelocity) {
+                        System.out.println("!!! Flywheel meets min velocity!");
+                        operatorSubState = ShootSubstate.OPEN_LOADER;
+                        shootStep.reset(); // reset timer for OPEN_LOADER
+                    }
+                    break;
+
+                case OPEN_LOADER:
+                    loaderPosition = LOADER_OPEN_POSITION;
+
+                    // Duration of OPEN_LOADER substate
+                    if (shootStep.seconds() >= operatorSubState.duration) { // seconds to keep loader open
+                        operatorSubState = ShootSubstate.CLOSE_LOADER;
+                        shootStep.reset(); // reset timer for CLOSE_LOADER
+                    }
+                    break;
+
+                case CLOSE_LOADER:
+                    loaderPosition = LOADER_CLOSED_POSITION;
+
+                    // Duration of CLOSE_LOADER substate
+                    if (shootStep.seconds() >= operatorSubState.duration) {
+                        operatorSubState = ShootSubstate.PUSH;
+                        shootStep.reset();
+                    }
+                    break;
+
+                case PUSH:
+                    pusherPosition = PUSHER_OPEN_POSITION;
+
+                    // Duration of PUSH substate
+                    if (shootStep.seconds() >= operatorSubState.duration) {
+                        operatorSubState = ShootSubstate.RETRACT;
+                        shootStep.reset();
+                    }
+                    break;
+
+                case RETRACT:
+                    pusherPosition = PUSHER_CLOSED_POSITION;
+
+                    // Duration of RETRACT substate
+                    if (shootStep.seconds() >= operatorSubState.duration) {
+                        operatorSubState = ShootSubstate.DONE;
+                        shootStep.reset();
+                    }
+                    break;
+
+                case DONE:
+                    ballsShot++;
+                    operatorSubState = ShootSubstate.IDLE;
+                    break;
+            }
+        }
+
+        // Finished sequence
+        if (ballsShot == numberToShoot) {
+            loaderPosition = LOADER_CLOSED_POSITION;
+            pusherPosition = PUSHER_CLOSED_POSITION;
+            flywheelVelocity = FLYWHEEL_MIN_RPM;
+            doneFiring = true;
+            nextOperatorState = OperatorState.IDLE;
+        }
+
+        if (nextOperatorState != operatorState) {
+            operatorState = nextOperatorState;
+            enterOperatorState = false;
+            return 1;
+        }
+        return 0;
     }
 
     public void printMotorTelemetry(String name, DcMotorEx motor, DcMotor.RunMode runMode, int counts) {
