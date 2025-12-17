@@ -7,15 +7,11 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Servo;
 
-import org.firstinspires.ftc.teamcode.core.util.Mecanum;
-
 import java.io.IOException;
 
 @Autonomous(name="Auto - Idle", group="Decode")
 public class Auto_Idle extends OpMode
 {
-    private Mecanum moMecanum = new Mecanum(0.7);
-
     // Actuators
     public final double    LOADER_OPEN_POSITION = 0.3;
     public final double    LOADER_CLOSED_POSITION = 0.45;
