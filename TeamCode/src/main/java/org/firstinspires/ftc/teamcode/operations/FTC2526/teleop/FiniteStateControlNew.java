@@ -9,15 +9,15 @@ import java.io.IOException;
 public class FiniteStateControlNew extends TeleOPMaster
 {
     // STATES
-    enum OperatorState {
+    public enum OperatorState {
         IDLE,
         LOAD_AND_SHOOT,
     }
-    enum ShootSubstate {
+    public enum ShootSubstate {
         IDLE(0.0),
         OPEN_LOADER(0.0),
-        CLOSE_LOADER(0.3),
-        PUSH(0.4),
+        CLOSE_LOADER(0.4),
+        PUSH(0.45),
         RETRACT(1),
         DONE(0)
         ;

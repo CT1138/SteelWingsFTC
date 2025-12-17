@@ -29,164 +29,288 @@
 
 package org.firstinspires.ftc.teamcode.operations.FTC2526.auto;
 
+import androidx.core.graphics.drawable.IconCompat;
+
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
-import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
-import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
-@Autonomous(name="Forward 24 inches", group="Decode")
-public class Auto_ShootThreeFromA extends LinearOpMode {
-    private Servo soAux_Stopper = null;
+import org.firstinspires.ftc.teamcode.operations.FTC2526.teleop.FiniteStateControlNew;
 
-    public final double    LOADER_OPEN_POSITION = 0.3;
-    public final double    LOADER_CLOSED_POSITION = 0.45;
+@Autonomous(name="Position A: Shoot 3", group="Decode")
 
-    /* Declare OpMode members. */
-    private DcMotorEx moDrive_FrontLeft = null;
-    private DcMotorEx moDrive_FrontRight = null;
-    private DcMotorEx moDrive_RearLeft = null;
-    private DcMotorEx moDrive_RearRight = null;
+public class Auto_ShootThreeFromA extends Auto_Base {
+    public ElapsedTime stateStart = new ElapsedTime();
+    public DriveSteps driverState = DriveSteps.WAIT;
+    public DriveSteps nextDriverState = DriveSteps.WAIT;
+    public enum DriveSteps {
+        WAIT(0),
+        LEAVE(1), // Moves out of starting zone
+        TURN_TO_GOAL(1),
+        BACKUP(1),
+        LAUNCH(1),
+        DONE(0); // Turn to face wheel
+        public final double startDelay;
+        DriveSteps(double startDelay) {
+            this.startDelay = startDelay;
+        }
+    }
 
-    private ElapsedTime runtime = new ElapsedTime();
-
-    static final double COUNTS_PER_MOTOR_REV = 28;     // eg: REV HD Hex Motor
-    static final double DRIVE_GEAR_REDUCTION = 12;   // gear ratio
-    static final double WHEEL_DIAMETER_INCHES = 2.95275591; // wheel size
-    static final double COUNTS_PER_INCH = (COUNTS_PER_MOTOR_REV * DRIVE_GEAR_REDUCTION) /
-            (WHEEL_DIAMETER_INCHES * 3.1415);
-    static final double DRIVE_SPEED = 0.8;
-    static final double TURN_SPEED  = 0.5;
-    static final double STRAFE_SPEED = 0.6;
+    void Auto_shootThreeFromA() {
+        numberToShoot = 3;
+        flywheelMaxVelocities = new double[]{3500, 4500, 5500};
+        flywheelPowerIndex = 3;
+    }
 
     @Override
-    public void runOpMode() {
-        soAux_Stopper = hardwareMap.get(Servo.class, "Loader");
-
-        moDrive_FrontLeft = hardwareMap.get(DcMotorEx.class, "FL");
-        moDrive_FrontRight = hardwareMap.get(DcMotorEx.class, "FR");
-        moDrive_RearLeft = hardwareMap.get(DcMotorEx.class, "RL");
-        moDrive_RearRight = hardwareMap.get(DcMotorEx.class, "RR");
-
-        moDrive_FrontLeft.setDirection(DcMotorSimple.Direction.REVERSE);
-        moDrive_FrontRight.setDirection(DcMotorSimple.Direction.FORWARD);
-        moDrive_RearLeft.setDirection(DcMotorSimple.Direction.REVERSE);
-        moDrive_RearRight.setDirection(DcMotorSimple.Direction.FORWARD);
-        soAux_Stopper.setPosition(LOADER_CLOSED_POSITION);
-        // Reset encoders
-        for (DcMotorEx motor : new DcMotorEx[]{moDrive_FrontLeft, moDrive_FrontRight, moDrive_RearLeft, moDrive_RearRight}) {
-            motor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-            motor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        }
-
-        telemetry.addLine("Encoders reset. Waiting for start...");
-        telemetry.update();
-        waitForStart();
-
-        soAux_Stopper.setPosition(LOADER_CLOSED_POSITION);
-
-        // Example autonomous routine
-        encoderDrive(DRIVE_SPEED,  48,  48, 5.0);   // Forward
-
-        telemetry.addLine("Path Complete");
-        telemetry.update();
-        sleep(1000);
+    public void init() {
+        stateStart.reset();
+        auxPusher.setPosition(PUSHER_CLOSED_POSITION);
+        auxLoader.setPosition(LOADER_CLOSED_POSITION);
+        super.init();
     }
 
-    /** Drive forward/backward */
-    public void encoderDrive(double speed, double leftInches, double rightInches, double timeoutS) {
-        int flTarget = moDrive_FrontLeft.getCurrentPosition() + (int)(leftInches * COUNTS_PER_INCH);
-        int frTarget = moDrive_FrontRight.getCurrentPosition() + (int)(rightInches * COUNTS_PER_INCH);
-        int rlTarget = moDrive_RearLeft.getCurrentPosition() + (int)(leftInches * COUNTS_PER_INCH);
-        int rrTarget = moDrive_RearRight.getCurrentPosition() + (int)(rightInches * COUNTS_PER_INCH);
+    @Override
+    public void loop() {
+        this.driverStateMachine();
+        this.shooterStateMachine();
 
-        setTargetPositions(flTarget, frTarget, rlTarget, rrTarget);
-        setRunToPosition();
+        super.loop();
+    }
+    // DRIVETRAIN
+    // State Handler
+    public void driverStateMachine() {
+        if(nextDriverState != driverState) {
+            driverState = nextDriverState;
+            stateStart.reset();
+        }
+        if(stateStart.seconds() < driverState.startDelay) return;
+        switch (driverState) {
+            case WAIT:
+                driverWAIT();
+                break;
+            case LEAVE:
+                driverLEAVE();
+                break;
+            case TURN_TO_GOAL:
+                driverTURN_TO_GOAL();
+                break;
+            case BACKUP:
+                driverBACKUP();
+                break;
+            case LAUNCH:
+                driverLAUNCH();
+                break;
+            case DONE:
+                driverDONE();
+                break;
+        }
+    }
 
-        runtime.reset();
-        setAllPower(Math.abs(speed));
+    // Before starting
+    private void driverWAIT() {
+        nextDriverState = DriveSteps.LEAVE;
+    }
 
-        while (opModeIsActive() && (runtime.seconds() < timeoutS) && allMotorsBusy()) {
-            telemetry.addData("Path", "Running to %7d:%7d", flTarget, frTarget);
-            telemetry.update();
+    // Leave Base Area
+    private boolean leaveStarted = false;
+    private void driverLEAVE() {
+        if (!leaveStarted) {
+            startEncoderDrive(DRIVE_BASE_SPEED, 88, 88);
+            leaveStarted = true;
         }
 
+        if (!encoderMotionBusy()) {
+            stopAllMotion();
+            nextDriverState = DriveSteps.TURN_TO_GOAL;
+        }
+    }
+
+    // Turn to Goal
+    private boolean turnStarted = false;
+    private void driverTURN_TO_GOAL() {
+        if (!turnStarted) {
+            double turn = degreesToTurnInches(-45);
+            startEncoderTurn(TWIST_BASE_SPEED, turn);
+            turnStarted = true;
+        }
+
+        if (!encoderMotionBusy()) {
+            stopAllMotion();
+            turnStarted = false;
+            nextDriverState = DriveSteps.BACKUP;
+        }
+    }
+
+    // Back up a bit
+    private boolean backupStarted = false;
+    private void driverBACKUP() {
+        if (!backupStarted) {
+            startEncoderDrive(DRIVE_BASE_SPEED, 0, 0);
+            backupStarted = true;
+        }
+
+        if (!encoderMotionBusy()) {
+            stopAllMotion();
+            nextDriverState = DriveSteps.LAUNCH;
+        }
+    }
+
+    // Launch artifacts
+    private boolean launchStarted = false;
+    private boolean doneFiring = false;
+    private void driverLAUNCH() {
+        if (!launchStarted) {
+            doneFiring = false;
+            nextState = FiniteStateControlNew.OperatorState.LOAD_AND_SHOOT;
+            launchStarted = true;
+        }
+
+        if (doneFiring && operatorState == FiniteStateControlNew.OperatorState.IDLE) {
+            launchStarted = false;
+            nextDriverState = DriveSteps.DONE;
+        }
+    }
+
+    // Done!
+    private void driverDONE() {
         stopAllMotion();
+        telemetry.addLine("DONE WITH OPERATION");
     }
 
-    /** Turn in place */
-    public void encoderTurn(double speed, double inches, double timeoutS) {
-        int flTarget = moDrive_FrontLeft.getCurrentPosition() + (int)(inches * COUNTS_PER_INCH);
-        int frTarget = moDrive_FrontRight.getCurrentPosition() - (int)(inches * COUNTS_PER_INCH);
-        int rlTarget = moDrive_RearLeft.getCurrentPosition() + (int)(inches * COUNTS_PER_INCH);
-        int rrTarget = moDrive_RearRight.getCurrentPosition() - (int)(inches * COUNTS_PER_INCH);
 
-        setTargetPositions(flTarget, frTarget, rlTarget, rrTarget);
-        setRunToPosition();
-
-        runtime.reset();
-        setAllPower(Math.abs(speed));
-
-        while (opModeIsActive() && (runtime.seconds() < timeoutS) && allMotorsBusy()) {
-            telemetry.addData("Turn", "Running to %7d:%7d", flTarget, frTarget);
-            telemetry.update();
+    // SHOOTER
+    public void shooterStateMachine() {
+        if(cancelState) {
+            cancelState = false;
+            operatorState = FiniteStateControlNew.OperatorState.IDLE;
+            nextState = FiniteStateControlNew.OperatorState.IDLE;
         }
 
-        stopAllMotion();
-    }
-
-    /** Strafe left/right for mecanum drive */
-    public void encoderStrafe(double speed, double inches, double timeoutS) {
-        int flTarget = moDrive_FrontLeft.getCurrentPosition() + (int)(inches * COUNTS_PER_INCH);
-        int frTarget = moDrive_FrontRight.getCurrentPosition() - (int)(inches * COUNTS_PER_INCH);
-        int rlTarget = moDrive_RearLeft.getCurrentPosition() - (int)(inches * COUNTS_PER_INCH);
-        int rrTarget = moDrive_RearRight.getCurrentPosition() + (int)(inches * COUNTS_PER_INCH);
-
-        setTargetPositions(flTarget, frTarget, rlTarget, rrTarget);
-        setRunToPosition();
-
-        runtime.reset();
-        setAllPower(Math.abs(speed));
-
-        while (opModeIsActive() && (runtime.seconds() < timeoutS) && allMotorsBusy()) {
-            telemetry.addData("Strafe", "Running to %7d:%7d", flTarget, frTarget);
-            telemetry.update();
+        // State handler
+        switch (operatorState) {
+            case IDLE:
+                state_idle();
+                break;
+            case LOAD_AND_SHOOT:
+                state_load_and_shoot();
+                break;
         }
 
-        stopAllMotion();
+        // Apply positions and powers post-state
+        auxPusher.setPosition(pusherPosition);
+        auxLoader.setPosition(loaderPosition);
+        auxFlywheel.setVelocity(flywheelVelocity);
     }
 
-    /** Helper functions */
-    private void setTargetPositions(int fl, int fr, int rl, int rr) {
-        moDrive_FrontLeft.setTargetPosition(fl);
-        moDrive_FrontRight.setTargetPosition(fr);
-        moDrive_RearLeft.setTargetPosition(rl);
-        moDrive_RearRight.setTargetPosition(rr);
+    // Default state
+    private int state_idle() {
+        if (!enterState) {
+            timeStep.reset();
+            enterState = true;
+        }
+
+        loaderPosition = LOADER_CLOSED_POSITION;
+        pusherPosition = PUSHER_CLOSED_POSITION;
+
+        // If queued state is not the current running state, switch states for next cycle
+        if (nextState != operatorState) {
+            operatorState = nextState;
+            enterState = false;
+            return 1;
+        }
+        return 0;
     }
 
-    private void setRunToPosition() {
-        for (DcMotorEx m : new DcMotorEx[]{moDrive_FrontLeft, moDrive_FrontRight, moDrive_RearLeft, moDrive_RearRight})
-            m.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+    private int state_load_and_shoot() {
+        int minVelocity = 1980;
+        double time = shootStep.seconds();
+
+        if (!enterState) {
+            timeStep.reset();
+            shootStep.reset();
+            enterState = true;
+
+            ballsShot = 0;
+
+            // Always initialize positions
+            loaderPosition = LOADER_CLOSED_POSITION;
+            pusherPosition = PUSHER_CLOSED_POSITION;
+            flywheelVelocity = this.rpmToVelocity(flywheelMaxVelocities[flywheelPowerIndex], FLYWHEEL_COUNTS_PER_REVOLUTION);
+        }
+
+        if (ballsShot < numberToShoot) {
+            telemetry.addData("Shoot State", subState.toString());
+            telemetry.addData("Shooter Time", time);
+            telemetry.addData("State Time", timeStep.seconds());
+
+            switch (subState) {
+                case IDLE:
+                    if(auxFlywheel.getVelocity() < minVelocity) {
+                        System.out.println("!!! Flywheel under minimum velocity, waiting . . .");
+                        shootStep.reset();
+                        loaderPosition = LOADER_CLOSED_POSITION;
+                        pusherPosition = PUSHER_CLOSED_POSITION;
+                    } else {
+                        System.out.println("!!! Flywheel meets min velocity!");
+                        subState = FiniteStateControlNew.ShootSubstate.OPEN_LOADER;
+                    }
+                    break;
+
+                case OPEN_LOADER:
+                    loaderPosition = LOADER_OPEN_POSITION;
+                    if (time >= subState.startTime) {
+                        subState = FiniteStateControlNew.ShootSubstate.CLOSE_LOADER;
+                        shootStep.reset();
+                    }
+                    break;
+
+                case CLOSE_LOADER:
+                    loaderPosition = LOADER_CLOSED_POSITION;
+                    if (time >= subState.startTime) {
+                        subState = FiniteStateControlNew.ShootSubstate.PUSH;
+                        shootStep.reset();
+                    }
+                    break;
+
+                case PUSH:
+                    pusherPosition = PUSHER_OPEN_POSITION;
+                    if (time >= subState.startTime) {
+                        subState = FiniteStateControlNew.ShootSubstate.RETRACT;
+                        shootStep.reset();
+                    }
+                    break;
+
+                case RETRACT:
+                    pusherPosition = PUSHER_CLOSED_POSITION;
+                    if (time >= subState.startTime) {
+                        subState = FiniteStateControlNew.ShootSubstate.DONE;
+                        shootStep.reset();
+                    }
+                    break;
+
+                case DONE:
+                    ballsShot++;
+                    subState = FiniteStateControlNew.ShootSubstate.IDLE;
+                    break;
+            }
+        }
+
+        // Finished sequence
+        if (ballsShot == numberToShoot) {
+            loaderPosition = LOADER_CLOSED_POSITION;
+            pusherPosition = PUSHER_CLOSED_POSITION;
+            flywheelVelocity = FLYWHEEL_MIN_RPM;
+            doneFiring = true;
+            nextState = FiniteStateControlNew.OperatorState.IDLE;
+        }
+
+        if (nextState != operatorState) {
+            operatorState = nextState;
+            enterState = false;
+            return 1;
+        }
+        return 0;
     }
 
-    private boolean allMotorsBusy() {
-        return moDrive_FrontLeft.isBusy() && moDrive_FrontRight.isBusy() &&
-                moDrive_RearLeft.isBusy() && moDrive_RearRight.isBusy();
-    }
-
-    private void setAllPower(double pwr) {
-        moDrive_FrontLeft.setPower(pwr);
-        moDrive_FrontRight.setPower(pwr);
-        moDrive_RearLeft.setPower(pwr);
-        moDrive_RearRight.setPower(pwr);
-    }
-
-    private void stopAllMotion() {
-        setAllPower(0);
-        for (DcMotorEx m : new DcMotorEx[]{moDrive_FrontLeft, moDrive_FrontRight, moDrive_RearLeft, moDrive_RearRight})
-            m.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        sleep(250);
-    }
 }
