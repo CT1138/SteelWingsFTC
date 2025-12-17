@@ -77,7 +77,7 @@ public class Auto_Base {
     public DcMotorEx       auxIntake = null;
     public Servo auxLoader = null;
     public Servo           auxPusher = null;
-    
+
 
 
 }
