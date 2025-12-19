@@ -30,42 +30,26 @@
 package org.firstinspires.ftc.teamcode.operations.FTC2526.auto;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
-import com.qualcomm.robotcore.util.ElapsedTime;
 
-import org.firstinspires.ftc.teamcode.operations.FTC2526.teleop.FiniteStateControlNew;
+@Autonomous(name="BOTH: Forward 88 Inches IMU", group="BOTH")
 
-@Autonomous(name="RED B: Shoot 3", group="RED")
-
-public class RED_ShootThreeFromB extends Auto_CCMoveAndShootBase {
+public class BOTH_CCForwardB extends Auto_CCMoveAndShootBase {
     // DRIVETRAIN
     // State Handler
-    public void driverStateMachine() {
-        if(nextDriverState != driverState) {
-            driverState = nextDriverState;
-            stateStart.reset();
+    boolean started = false;
+
+    @Override
+    public void loop() {
+
+        if (!started) {
+            startEncoderDriveIMU(0.3, 200);
+            started = true;
         }
-        if(stateStart.seconds() < driverState.startDelay) return;
-        switch (driverState) {
-            case WAIT:
-                driverWAIT(DriveSteps.LEAVE);
-                break;
-            case LEAVE:
-                // 80% Speed, forward 88 Inches
-                driverLEAVE(DriveSteps.TURN_TO_GOAL, 0.8, 44);
-                break;
-            case TURN_TO_GOAL:
-                // Positive turns clockwise, negative turns Counterclockwise
-                driverTURN_TO_GOAL(DriveSteps.BACKUP, 0.4, 135);
-                break;
-            case BACKUP:
-                driverBACKUP(DriveSteps.LAUNCH,0.4, 0);
-                break;
-            case LAUNCH:
-                driverLAUNCH(DriveSteps.DONE);
-                break;
-            case DONE:
-                driverDONE(DriveSteps.DONE);
-                break;
+
+        updateEncoderDriveIMU(0.3);
+
+        if (!encoderMotionBusy()) {
+            stopAllMotion();
         }
     }
 }

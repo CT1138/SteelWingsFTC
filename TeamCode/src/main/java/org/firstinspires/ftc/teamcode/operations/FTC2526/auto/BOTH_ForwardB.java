@@ -33,7 +33,7 @@ import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 
 @Autonomous(name="BOTH: Forward 88 Inches", group="BOTH")
 
-public class BOTH_ForwardB extends Auto_MoveAndShootBase {
+public class BOTH_ForwardB extends Auto_CCMoveAndShootBase {
     // DRIVETRAIN
     // State Handler
     @Override

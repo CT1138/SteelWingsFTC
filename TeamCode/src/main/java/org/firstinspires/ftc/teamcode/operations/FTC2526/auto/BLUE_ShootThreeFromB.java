@@ -36,7 +36,7 @@ import org.firstinspires.ftc.teamcode.operations.FTC2526.teleop.FiniteStateContr
 
 @Autonomous(name="BLUE B: Shoot 3", group="BLUE")
 
-public class BLUE_ShootThreeFromB extends Auto_MoveAndShootBase {
+public class BLUE_ShootThreeFromB extends Auto_CCMoveAndShootBase {
     // DRIVETRAIN
     // State Handler
     public void driverStateMachine() {

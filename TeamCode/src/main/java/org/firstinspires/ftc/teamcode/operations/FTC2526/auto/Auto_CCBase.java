@@ -13,12 +13,13 @@ import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
 import org.firstinspires.ftc.teamcode.core.util.Mecanum;
 
 @Disabled
 @Autonomous(name="Auto - Base", group="Decode")
-public class Auto_Base extends OpMode {
+public class Auto_CCBase extends OpMode {
     //============================================================================================
     // BEGIN VARIABLES
     // EDIT CONTROLS IN loop()
@@ -46,6 +47,47 @@ public class Auto_Base extends OpMode {
     }
 
     public double[]  flywheelMaxVelocities = {3500, 4500, 5500};
+    // ===== IMU HEADING HOLD =====
+    public static final double HEADING_KP = 0.02; // start here
+    public static final double HEADING_TOLERANCE = 0.5; // degrees
+    // ===== HEADING HOLD STATE =====
+    private double headingTarget = 0.0;
+    private boolean headingHoldActive = false;
+
+    public double getYaw() {
+
+        double yawControl = Control_IMU
+                .getRobotYawPitchRollAngles()
+                .getYaw(AngleUnit.DEGREES);
+
+        double yawExpansion = Expansion_IMU
+                .getRobotYawPitchRollAngles()
+                .getYaw(AngleUnit.DEGREES);
+
+        // Convert to radians
+        double cRad = Math.toRadians(yawControl);
+        double eRad = Math.toRadians(yawExpansion);
+
+        // Average as vectors
+        double x = Math.cos(cRad) + Math.cos(eRad);
+        double y = Math.sin(cRad) + Math.sin(eRad);
+
+        // Convert back to degrees
+        return Math.toDegrees(Math.atan2(y, x));
+    }
+    public double getHeadingError() {
+        double error = headingTarget - getYaw();
+        return AngleUnit.normalizeDegrees(error);
+    }
+
+    public double getHeadingCorrection() {
+        double error = getHeadingError();
+
+        if (Math.abs(error) <= HEADING_TOLERANCE) return 0.0;
+
+        double correction = error * HEADING_KP;
+        return Math.max(-0.3, Math.min(0.3, correction));
+    }
 
     // non-editable
     public int           flywheelPowerIndex = 1;
@@ -177,6 +219,10 @@ public class Auto_Base extends OpMode {
         Control_IMU.initialize(new IMU.Parameters(new RevHubOrientationOnRobot(CONTROL_LOGO_DIRECTION, CONTROL_USB_DIRECTION)));
         Control_IMU.resetYaw();
 
+        this.Expansion_IMU = hardwareMap.get(IMU.class, "imu2");
+        Expansion_IMU.initialize(new IMU.Parameters(new RevHubOrientationOnRobot(EXPANSION_LOGO_DIRECTION, EXPANSION_USB_DIRECTION)));
+        Expansion_IMU.resetYaw();
+
         // Drivetrain handlers
         this.mecanum = new Mecanum();
 
@@ -201,6 +247,41 @@ public class Auto_Base extends OpMode {
         setTargetPositions(flTarget, frTarget, rlTarget, rrTarget);
         setRunToPosition();
         setAllPower(Math.abs(speed));
+    }
+
+    public void startEncoderDriveIMU(double speed, double inches) {
+
+        int ticks = (int)(inches * COUNTS_PER_INCH);
+
+        headingTarget = getYaw();        // lock current heading
+        headingHoldActive = true;
+
+        startEncoderMotion(
+                speed,
+                driveFL.getCurrentPosition() + ticks,
+                driveFR.getCurrentPosition() + ticks,
+                driveRL.getCurrentPosition() + ticks,
+                driveRR.getCurrentPosition() + ticks
+        );
+    }
+    public void updateEncoderDriveIMU(double baseSpeed) {
+
+        if (!headingHoldActive || !encoderMotionBusy()) {
+            headingHoldActive = false;
+            return;
+        }
+
+        double correction = getHeadingCorrection();
+
+        driveFL.setPower(baseSpeed - correction);
+        driveRL.setPower(baseSpeed - correction);
+
+        driveFR.setPower(baseSpeed + correction);
+        driveRR.setPower(baseSpeed + correction);
+
+        telemetry.addData("Heading Target", headingTarget);
+        telemetry.addData("Heading", getYaw());
+        telemetry.addData("Correction", correction);
     }
 
     public void startEncoderDrive(double speed, double leftInches, double rightInches) {
