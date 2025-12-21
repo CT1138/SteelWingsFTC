@@ -51,14 +51,14 @@ public class BLUE_ShootThreeFromB extends Auto_CCMoveAndShootBase {
                 break;
             case LEAVE:
                 // 80% Speed, forward 88 Inches
-                driverLEAVE(DriveSteps.TURN_TO_GOAL, 0.8, 44);
+                driverLEAVE(DriveSteps.TURN_TO_GOAL, leaveSpeed, distanceB);
                 break;
             case TURN_TO_GOAL:
                 // Positive turns clockwise, negative turns Counterclockwise
-                driverTURN_TO_GOAL(DriveSteps.BACKUP, 0.4, -135);
+                driverTURN_TO_GOAL(DriveSteps.BACKUP, 0.4, turnAngleB);
                 break;
             case BACKUP:
-                driverBACKUP(DriveSteps.LAUNCH,0.4, 0);
+                driverBACKUP(DriveSteps.LAUNCH, 0.5, 0);
                 break;
             case LAUNCH:
                 driverLAUNCH(DriveSteps.DONE);

@@ -1,11 +1,12 @@
 package org.firstinspires.ftc.teamcode.operations.FTC2526.auto;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
-
+@Disabled
 @Autonomous(name = "Auto - Angle Hold", group = "TEST")
 public class Auto_AngleHold extends Auto_Base {
 

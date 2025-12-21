@@ -30,9 +30,10 @@
 package org.firstinspires.ftc.teamcode.operations.FTC2526.auto;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 
+@Disabled
 @Autonomous(name="BOTH: Forward 88 Inches IMU", group="BOTH")
-
 public class BOTH_CCForwardB extends Auto_CCMoveAndShootBase {
     // DRIVETRAIN
     // State Handler
@@ -42,7 +43,7 @@ public class BOTH_CCForwardB extends Auto_CCMoveAndShootBase {
     public void loop() {
 
         if (!started) {
-            startEncoderDriveIMU(0.3, 200);
+            startEncoderDriveIMU(0.3, leaveDistance);
             started = true;
         }
 

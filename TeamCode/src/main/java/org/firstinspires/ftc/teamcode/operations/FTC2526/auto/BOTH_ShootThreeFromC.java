@@ -32,6 +32,7 @@ package org.firstinspires.ftc.teamcode.operations.FTC2526.auto;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
+import org.firstinspires.ftc.teamcode.operations.FTC2526.Field;
 import org.firstinspires.ftc.teamcode.operations.FTC2526.teleop.FiniteStateControlNew;
 
 @Autonomous(name="BOTH B: Shoot 3", group="BOTH")
@@ -51,14 +52,9 @@ public class BOTH_ShootThreeFromC extends Auto_CCMoveAndShootBase {
                 break;
             case LEAVE:
                 // 80% Speed, forward 88 Inches
-                driverLEAVE(DriveSteps.TURN_TO_GOAL, 0.8, 48);
-                break;
-            case TURN_TO_GOAL:
-                // Positive turns clockwise, negative turns Counterclockwise
-                driverTURN_TO_GOAL(DriveSteps.BACKUP, 0.4, -180);
-                break;
-            case BACKUP:
-                driverBACKUP(DriveSteps.LAUNCH,0.4, 0);
+                //double length = (Field.FULL_TILE_INCHES * 3) * Math.sqrt(2);
+
+                driverLEAVE(DriveSteps.LAUNCH, leaveSpeed, -distanceC);
                 break;
             case LAUNCH:
                 driverLAUNCH(DriveSteps.DONE);

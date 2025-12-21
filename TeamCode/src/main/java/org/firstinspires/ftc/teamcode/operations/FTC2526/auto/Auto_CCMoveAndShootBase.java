@@ -36,6 +36,15 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 @Disabled
 @Autonomous(name="BLUE A: Shoot 3", group="BLUE")
 public class Auto_CCMoveAndShootBase extends Auto_CCBase {
+    public double leaveSpeed = 0.6;
+    public double turnAngleA = 50;
+    public double turnAngleB = 135;
+
+    public double leaveDistance = 30;
+    public double backupDistance = 5;
+    public double distanceA = 80;
+    public double distanceB = 44;
+    public double distanceC = 52;
     public ElapsedTime stateStart = new ElapsedTime();
     public DriveSteps driverState = DriveSteps.WAIT;
     public DriveSteps nextDriverState = DriveSteps.WAIT;
@@ -58,8 +67,8 @@ public class Auto_CCMoveAndShootBase extends Auto_CCBase {
         stateStart.reset();
         super.init();
         numberToShoot = 3;
-        flywheelMaxVelocities = new double[]{3500, 4500, 5500};
-        flywheelPowerIndex = 2;
+        flywheelMaxVelocities = new double[]{3200, 4500, 5500};
+        flywheelPowerIndex = 1;
         auxPusher.setPosition(super.PUSHER_CLOSED_POSITION);
         auxLoader.setPosition(super.LOADER_CLOSED_POSITION);
     }

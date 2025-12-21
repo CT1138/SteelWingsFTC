@@ -51,11 +51,14 @@ public class RED_ShootThreeFromA extends Auto_CCMoveAndShootBase {
                 break;
             case LEAVE:
                 // 80% Speed, forward 88 Inches
-                driverLEAVE(DriveSteps.TURN_TO_GOAL, 0.8, 88);
+                driverLEAVE(DriveSteps.TURN_TO_GOAL, leaveSpeed, distanceA);
                 break;
             case TURN_TO_GOAL:
                 // Positive turns clockwise, negative turns Counterclockwise
-                driverTURN_TO_GOAL(DriveSteps.LAUNCH, 0.4, 45);
+                driverTURN_TO_GOAL(DriveSteps.BACKUP, 0.4, turnAngleA);
+                break;
+            case BACKUP:
+                driverBACKUP(DriveSteps.LAUNCH, 0.5, -backupDistance);
                 break;
             case LAUNCH:
                 driverLAUNCH(DriveSteps.DONE);

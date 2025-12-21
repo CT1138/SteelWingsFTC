@@ -49,7 +49,7 @@ public class BOTH_ForwardB extends Auto_CCMoveAndShootBase {
                 break;
             case LEAVE:
                 // 80% Speed, forward 88 Inches
-                driverLEAVE(DriveSteps.DONE, 0.8, 88);
+                driverLEAVE(DriveSteps.DONE, leaveSpeed, leaveDistance);
                 break;
             case DONE:
                 driverDONE(DriveSteps.DONE);
